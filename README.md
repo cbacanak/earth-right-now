@@ -8,7 +8,14 @@ question that matters: **what else is near this?**
 
 ## Status
 
-Pre-prototype. Nothing is built yet.
+Stage 1 prototype. Static HTML/CSS/JS, no build step, no keys, no server.
+
+Open `index.html` in a browser, or serve the folder with anything static
+(`python3 -m http.server`). For GitHub Pages: Settings → Pages → deploy
+from `main`, root folder.
+
+Keys: `R` picks a random event, `Esc` clears the selection. The URL hash
+carries the selected event, so a view can be shared.
 
 ## Plan
 
