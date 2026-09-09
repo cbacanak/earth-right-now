@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth right now</title>
+  <meta name="description" content="An interactive map of what is happening on Earth right this second. Click an event and see what else is near it.">
+  <meta name="color-scheme" content="dark">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span class="brand-name">EARTH RIGHT NOW</span>
+      <span class="clock" id="clock">--:--:-- UTC</span>
+    </div>
+    <div class="feeds" id="feeds">
+      <span class="feed" data-source="usgs"><i class="dot"></i>USGS <b>–</b></span>
+      <span class="feed" data-source="eonet"><i class="dot"></i>EONET <b>–</b></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-wrap" id="map-wrap">
+      <svg id="map" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet" role="img" aria-label="World grid with live events">
+        <defs>
+          <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="0.8" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect class="map-bg" x="0" y="0" width="360" height="180"/>
+        <g id="graticule"></g>
+        <g id="labels"></g>
+        <g id="tracks"></g>
+        <g id="links"></g>
+        <g id="markers"></g>
+        <g id="selection"></g>
+      </svg>
+      <div class="legend" id="legend"></div>
+      <div class="hint" id="hint">loading feeds…</div>
+    </section>
+
+    <aside class="panel" id="panel">
+      <div class="panel-top">
+        <button class="btn-random" id="btn-random" type="button" title="Jump to a random event">show me something</button>
+      </div>
+
+      <div class="empty" id="empty">
+        <p>Click an event on the map.</p>
+        <p class="muted">Or let the map pick one for you.</p>
+      </div>
+
+      <div class="detail" id="detail" hidden>
+        <div class="kind" id="d-kind"></div>
+        <h1 class="title" id="d-title"></h1>
+        <dl class="facts">
+          <div><dt>when</dt><dd id="d-when"></dd></div>
+          <div><dt>where</dt><dd id="d-where"></dd></div>
+          <div><dt id="d-mag-label">size</dt><dd id="d-mag"></dd></div>
+          <div><dt>source</dt><dd id="d-source"></dd></div>
+        </dl>
+
+        <h2 class="section">what else is near this</h2>
+        <p class="muted small" id="near-note"></p>
+        <ol class="near" id="near"></ol>
+
+        <h2 class="section">trail</h2>
+        <ol class="trail" id="trail"></ol>
+      </div>
+    </aside>
+  </main>
+
+  <script src="js/sources.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
