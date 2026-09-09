@@ -83,10 +83,15 @@ başka kaynağa gerek yok.
 ## 3. Mimari
 
 **Aşama 1–2:** tamamen istemci tarafı, statik barındırma, maliyet ~0.
+**GitHub Pages yeterli** — akışlara doğrudan tarayıcıdan bağlanılıyor,
+anahtar yok, sunucu yok. İçerik dağıtım ağı üzerinden çalıştığı için
+site zaten her yerden açılır.
 
 **Aşama 3'ten itibaren değişiyor:** API anahtarı tarayıcı koduna
 konulamaz, kaynak koddan okunur. Anahtar isteyen her kaynak bir ara
-sunucu gerektirir. Bu kararı Aşama 3'e kadar erteliyoruz — o zamana
+sunucu gerektirir. O noktada **Cloudflare Pages'e taşı** — aynı statik
+siteyi barındırırken yanında sunucusuz fonksiyon çalıştırabiliyor,
+taşıma bir saatlik iş. Bu kararı Aşama 3'e kadar erteliyoruz; o zamana
 kadar sunucu yok.
 
 ## 4. Tasarım dili
