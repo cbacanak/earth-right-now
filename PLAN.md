@@ -54,10 +54,33 @@ veritabanı demek. En sona.
 | Kaynak | Kapsam | Not |
 |---|---|---|
 | **NASA EONET** | yangın, volkan, fırtına, deniz/göl buzu | Anahtar gerektirmeyen NASA uçlarından. Tek kaynakta üç katman. |
-| **USGS** | deprem | GeoJSON, CORS açık |
+| **USGS** | deprem | M2.5+, son 7 gün. GeoJSON, CORS açık. Yarıçap büyüklükle ölçekleniyor. |
 
 EONET tek başına katmanların büyük kısmını veriyor. Aşama 1 için
 başka kaynağa gerek yok.
+
+**USGS pencere kararı (Aşama 1'de alındı):** Son 24 saat yerine son
+7 gün. 24 saatlik akış çoğunlukla Kaliforniya mikro depremlerinden
+oluşuyor ve ızgaranın geri kalanı boş kalıyor. 7 gün + M2.5 eşiği
+haritayı dünya çapında dolduruyor. EONET açık olaylar için 60 gün.
+
+### Aşama 1 durumu (9 Eyl 2026)
+
+Kod yazıldı ve `main`'e girdi (PR #4). İki kaynak, anahtarsız,
+sunucusuz, kapsam dışı olanlar PR'da listelenmiş. Rabbit hole motoru
+kuruldu: mesafe kapı, zaman ağırlık, kesim ~1.500 km, komşular haritada
+bağlantı çizgisi, yakında bir şey yoksa en yakın üç yine gösteriliyor.
+"Show me something" en az iki komşusu olan olayları tercih ediyor.
+
+**Kapsam notu:** Paylaşılabilir URL hash Aşama 1'de eklendi; teknik
+olarak Aşama 3 konusuydu. Zararsız, geri alınmıyor, ama kayıt için.
+
+**Test henüz yapılmadı.** Kod sahte veriyle doğrulandı, canlı API ile
+değil. Aşama 1'in asıl testi kodla ilgili değil — "bir olaydan diğerine
+geçmek istiyor musun?" sorusunu sadece kullanıcı canlı veriyle
+cevaplayabilir. Sıradaki üç adım: Pages'i `main` için aç, iki durum
+noktasının yeşile döndüğünü gör, on dakika oyna ve cevabı CHANGELOG'a
+yaz.
 
 ### Aşama 3'e ertelenen (anahtar ve/veya proxy gerektirir)
 
