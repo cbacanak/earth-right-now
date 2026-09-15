@@ -112,7 +112,71 @@
     return from[Math.floor(rand() * from.length)] || null;
   }
 
+  // ---------- felt intensity ----------
+  //
+  // Allen, Wald and Worden (2012), "Intensity attenuation in active crustal
+  // regions", J. Seismology 16: 409-433 — the hypocentral-distance form, which
+  // is the one meant for real-time response where no rupture geometry is known
+  // yet. That is exactly our situation: the USGS feed gives a magnitude, a
+  // depth and an epicentre, and nothing about the fault.
+  //
+  // Coefficients are transcribed from the GEM OpenQuake implementation
+  // (openquake/hazardlib/gsim/allen_2012_ipe.py, class AllenEtAl2012Rhypo)
+  // rather than written from memory.
+  //
+  // What this is not: it has no site amplification term, it assumes active
+  // shallow crust, and it returns a circle where real shaking is anisotropic.
+  // It is a first-order estimate of where an earthquake was felt, and the
+  // interface says so.
+  var IPE = { c0: 2.085, c1: 1.428, c2: -1.402, c4: 0.078, m1: -0.209, m2: 2.042 };
+  var FELT_MMI = 4;          // "felt indoors by many"
+  var IPE_MAX_DEPTH_KM = 70; // past the shallow class the model is out of domain
+  var KM_PER_DEG = 111.32;
+
+  // Modified Mercalli intensity at a hypocentral distance, in km.
+  function mmi(mag, rhypKm) {
+    var rm = IPE.m1 + IPE.m2 * Math.exp(mag - 5);
+    var f = IPE.c2 * Math.log(Math.sqrt(rhypKm * rhypKm + rm * rm));
+    if (rhypKm > 50) f += IPE.c4 * Math.log(rhypKm / 50);
+    return IPE.c0 + IPE.c1 * mag + f;
+  }
+
+  // Radius on the ground, in km, at which intensity falls to `target`.
+  // Zero means the threshold is not reached even above the hypocentre, which
+  // is the honest answer for a small or a deep event: draw nothing.
+  function feltRadiusKm(mag, depthKm, target) {
+    if (mag === null || mag === undefined || depthKm === null || depthKm === undefined) return null;
+    if (depthKm > IPE_MAX_DEPTH_KM) return null;   // out of the model's domain
+    var t = target === undefined ? FELT_MMI : target;
+    var h = Math.max(1, depthKm);
+    if (mmi(mag, h) < t) return 0;
+    var lo = h, hi = h + 4000;
+    if (mmi(mag, hi) > t) return null;             // implausibly large; refuse
+    for (var i = 0; i < 60; i++) {
+      var mid = (lo + hi) / 2;
+      if (mmi(mag, mid) > t) lo = mid; else hi = mid;
+    }
+    var rhyp = (lo + hi) / 2;
+    var r2 = rhyp * rhyp - h * h;
+    return r2 <= 0 ? 0 : Math.sqrt(r2);
+  }
+
+  // A constant ground radius is not a circle on an equirectangular grid: one
+  // degree of longitude shrinks with latitude. Return both semi-axes so the
+  // map can draw the ellipse the projection actually calls for.
+  function radiusToDegrees(km, lat) {
+    var ry = km / KM_PER_DEG;
+    var cos = Math.cos(lat * D2R);
+    var rx = km / (KM_PER_DEG * Math.max(0.05, Math.abs(cos)));
+    return { rx: rx, ry: ry };
+  }
+
   ERN.engine = {
+    mmi: mmi,
+    feltRadiusKm: feltRadiusKm,
+    radiusToDegrees: radiusToDegrees,
+    FELT_MMI: FELT_MMI,
+    IPE_MAX_DEPTH_KM: IPE_MAX_DEPTH_KM,
     haversineKm: haversineKm,
     bearingDeg: bearingDeg,
     compass: compass,

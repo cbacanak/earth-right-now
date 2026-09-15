@@ -366,6 +366,8 @@
       srcCell.appendChild(a);
     } else srcCell.textContent = label;
 
+    renderTelemetry(ev);
+
     // near list
     var note = $('#near-note');
     var scope = allActive() ? '' : ' in the active categories';
@@ -409,6 +411,61 @@
       li.appendChild(s);
       trail.appendChild(li);
     });
+  }
+
+  // Real measurements only. Depth comes straight from the feed; the felt
+  // radius comes from a published attenuation model and says so. Nothing here
+  // is simulated: a waveform we do not have would be an invention, and an
+  // instrument that invents its own signal is worthless.
+  var DEPTH_CLASSES = [
+    { max: 70, axis: 70, label: 'shallow' },
+    { max: 300, axis: 300, label: 'intermediate' },
+    { max: 700, axis: 700, label: 'deep' }
+  ];
+
+  function renderTelemetry(ev) {
+    var tm = $('#tm'), depBlock = $('#tm-depth'), feltBlock = $('#tm-felt');
+    var hasDepth = ev.kind === 'earthquake' && ev.depthKm !== null && ev.depthKm !== undefined;
+
+    if (hasDepth) {
+      var d = Math.max(0, ev.depthKm), cls = DEPTH_CLASSES[DEPTH_CLASSES.length - 1];
+      for (var i = 0; i < DEPTH_CLASSES.length; i++) {
+        if (d <= DEPTH_CLASSES[i].max) { cls = DEPTH_CLASSES[i]; break; }
+      }
+      $('#tm-depth-val').textContent = Math.round(d) + ' km · ' + cls.label;
+      $('#tm-depth-max').textContent = cls.axis + ' km';
+      $('#tm-depth-mark').style.left = Math.min(100, (d / cls.axis) * 100) + '%';
+      depBlock.hidden = false;
+    } else {
+      depBlock.hidden = true;
+    }
+
+    if (ev.kind === 'earthquake') {
+      var km = ERN.engine.feltRadiusKm(ev.mag, ev.depthKm);
+      var val = $('#tm-felt-val'), fnote = $('#tm-felt-note');
+      var basis = 'Modelled from magnitude and depth with the Allen, Wald and ' +
+        'Worden (2012) intensity attenuation for active crustal regions. ' +
+        'MMI ' + ERN.engine.FELT_MMI + ' is "felt indoors by many". ' +
+        'No site effects, and real shaking is not a circle.';
+      if (km === null) {
+        val.textContent = '—';
+        fnote.textContent = (ev.depthKm > ERN.engine.IPE_MAX_DEPTH_KM)
+          ? 'Deeper than ' + ERN.engine.IPE_MAX_DEPTH_KM + ' km, which is outside the model\u2019s range. Nothing drawn.'
+          : 'Not enough of the event is known to model this. Nothing drawn.';
+      } else if (km === 0) {
+        val.textContent = 'not felt';
+        fnote.textContent = 'The model does not reach MMI ' + ERN.engine.FELT_MMI +
+          ' even above the hypocentre. ' + basis;
+      } else {
+        val.textContent = '≈ ' + (km < 10 ? km.toFixed(1) : Math.round(km).toLocaleString('en-US')) + ' km';
+        fnote.textContent = basis;
+      }
+      feltBlock.hidden = false;
+    } else {
+      feltBlock.hidden = true;   // no published basis outside earthquakes
+    }
+
+    tm.hidden = depBlock.hidden && feltBlock.hidden;
   }
 
   // ---------- clock ----------

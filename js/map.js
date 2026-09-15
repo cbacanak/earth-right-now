@@ -111,6 +111,7 @@
     this.gTracks = svg.querySelector('#tracks');
     this.gLinks = svg.querySelector('#links');
     this.gMarkers = svg.querySelector('#markers');
+    this.gFelt = svg.querySelector('#felt');
     this.gSel = svg.querySelector('#selection');
     this.gFocus = svg.querySelector('#focus');
     this.live = document.getElementById('map-live');
@@ -637,7 +638,13 @@
       if (n) n.classList.add('near');
       if (this.trackNodes[o.id]) this.trackNodes[o.id].classList.add('near');
       if (Math.abs(o.lon - ev.lon) <= 180) {
-        el('line', { class: 'link', x1: x, y1: y, x2: px(o.lon), y2: py(o.lat) }, this.gLinks);
+        // The vector to a neighbour carries how related the engine actually
+        // judged it to be, instead of every line looking equally strong.
+        var strength = Math.max(0, Math.min(1, near[k].score || 0));
+        el('line', {
+          class: 'link', x1: x, y1: y, x2: px(o.lon), y2: py(o.lat),
+          'stroke-opacity': (0.18 + 0.52 * strength).toFixed(3)
+        }, this.gLinks);
       }
     }
 
@@ -652,9 +659,31 @@
     }
   };
 
+  // A modelled felt extent for the selected earthquake, or nothing at all.
+  // It lives under the markers so it never hides an event, and it is an
+  // ellipse rather than a circle because a constant ground radius is not
+  // round on an equirectangular grid.
+  Map.prototype.drawFelt = function () {
+    this.gFelt.textContent = '';
+    var ev = this._selEv;
+    if (!ev || ev.kind !== 'earthquake' || !ERN.engine.feltRadiusKm) return;
+    var km = ERN.engine.feltRadiusKm(ev.mag, ev.depthKm);
+    if (!km) return;   // null: out of the model's domain. 0: not felt. Draw neither.
+    var d = ERN.engine.radiusToDegrees(km, ev.lat);
+    var e = el('ellipse', {
+      class: 'felt-ring',
+      cx: px(ev.lon), cy: py(ev.lat),
+      rx: d.rx.toFixed(3), ry: d.ry.toFixed(3)
+    }, this.gFelt);
+    var t = el('title', null, e);
+    t.textContent = 'Modelled MMI ' + ERN.engine.FELT_MMI + ' felt radius, about ' +
+      Math.round(km) + ' km. Allen, Wald and Worden 2012; no site effects.';
+  };
+
   // Crosshair and ring on the selected event, sized for the current zoom.
   Map.prototype.drawSelection = function () {
     this.gSel.textContent = '';
+    this.drawFelt();
     var ev = this._selEv;
     if (!ev) return;
     var zs = this._zs;
@@ -687,6 +716,15 @@
     // right in — separating events that sit on the same pixel is the reason
     // zoom exists here at all.
     var w = span > 0 ? Math.max(span, MIN_W) : FRAME_MIN_W;
+    // Make room for the modelled felt extent if there is one. A ring drawn
+    // entirely outside the frame is not telemetry the reader can use.
+    if (ev.kind === 'earthquake' && ERN.engine.feltRadiusKm) {
+      var km = ERN.engine.feltRadiusKm(ev.mag, ev.depthKm);
+      if (km) {
+        var rd = ERN.engine.radiusToDegrees(km, ev.lat);
+        w = Math.max(w, rd.rx * 2.4, (rd.ry * 2.4) / a);
+      }
+    }
     w = Math.max(MIN_W, Math.min(FRAME_MAX_W, w));
     var cx = px((minLon + maxLon) / 2);
     var cy = py((minLat + maxLat) / 2);
