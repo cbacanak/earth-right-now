@@ -30,7 +30,10 @@
 
   <main class="layout">
     <section class="map-wrap" id="map-wrap">
-      <svg id="map" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet" role="img" aria-label="World grid with live events">
+      <svg id="map" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet"
+           tabindex="0" role="application"
+           aria-label="World grid of live events. Arrow keys move between events, Enter opens one."
+           aria-describedby="map-keys">
         <defs>
           <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
             <feGaussianBlur stdDeviation="0.8" result="b"/>
@@ -44,8 +47,15 @@
         <g id="links"></g>
         <g id="markers"></g>
         <g id="selection"></g>
+        <g id="focus"></g>
       </svg>
       <div class="hint" id="hint">loading feeds…</div>
+      <p id="map-keys" class="sr-only">
+        The map is a single stop. Arrow keys move to the nearest event in that
+        direction, Enter or Space opens it, R jumps to a random event, Escape
+        clears the selection.
+      </p>
+      <p id="map-live" class="sr-only" role="status" aria-live="polite"></p>
     </section>
 
     <aside class="panel" id="panel">

@@ -231,7 +231,31 @@ body {
 
 /* ---------- map (the one place with courage) ---------- */
 
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .map-bg { fill: var(--bg); }
+
+/* The map is one tab stop. Its own ring is quiet because the reticle drawn on
+   the focused event is what the reader is meant to track; the ring only says
+   which control has the keyboard. */
+#map { outline: none; }
+#map:focus-visible .map-bg { stroke: var(--fg-dim); stroke-width: calc(0.4 * var(--zs, 1)); }
+
+.focus-reticle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: calc(0.35 * var(--zs, 1));
+  stroke-linecap: round;
+  pointer-events: none;
+}
 
 .grat { stroke: var(--grid-faint); stroke-width: calc(0.15 * var(--zs, 1)); fill: none; }
 .grat.major { stroke: var(--grid); stroke-width: calc(0.2 * var(--zs, 1)); }
@@ -419,6 +443,12 @@ body {
   cursor: pointer;
 }
 .near li:hover { background: rgba(255,255,255,0.03); }
+.near li:focus-visible,
+.trail li:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  background: rgba(255,255,255,0.04);
+}
 .near li i { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; display: inline-block; }
 .near .n-title { color: var(--fg); }
 .near .n-meta { color: var(--fg-muted); font-size: 11px; margin-top: 2px; font-variant-numeric: tabular-nums; }

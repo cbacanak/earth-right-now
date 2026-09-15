@@ -370,6 +370,8 @@
     near.items.forEach(function (n) {
       var li = document.createElement('li');
       li.setAttribute('data-id', n.event.id);
+      li.setAttribute('tabindex', '0');
+      li.setAttribute('role', 'button');
       li.appendChild(kindDot(n.event.kind));
       var box = document.createElement('div');
       var t = document.createElement('div');
@@ -391,6 +393,8 @@
       if (!e) return;
       var li = document.createElement('li');
       li.setAttribute('data-id', id);
+      li.setAttribute('tabindex', '0');
+      li.setAttribute('role', 'button');
       if (id === ev.id) li.className = 'current';
       li.appendChild(kindDot(e.kind));
       var s = document.createElement('span');
@@ -432,14 +436,22 @@
       if (pick) select(pick.id);
     });
 
-    $('#near').addEventListener('click', function (e) {
-      var li = e.target.closest('li[data-id]');
-      if (li) select(li.getAttribute('data-id'));
-    });
-    $('#trail').addEventListener('click', function (e) {
-      var li = e.target.closest('li[data-id]');
-      if (li) select(li.getAttribute('data-id'), { keepTrail: true });
-    });
+    function listActivate(root, opts) {
+      var node = $(root);
+      node.addEventListener('click', function (e) {
+        var li = e.target.closest('li[data-id]');
+        if (li) select(li.getAttribute('data-id'), opts);
+      });
+      node.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+        var li = e.target.closest ? e.target.closest('li[data-id]') : null;
+        if (!li) return;
+        e.preventDefault();   // Space would scroll the panel
+        select(li.getAttribute('data-id'), opts);
+      });
+    }
+    listActivate('#near');
+    listActivate('#trail', { keepTrail: true });
 
     window.addEventListener('hashchange', function () {
       var id = location.hash.length > 1 ? decodeURIComponent(location.hash.slice(1)) : null;
@@ -448,6 +460,7 @@
 
     document.addEventListener('keydown', function (e) {
       if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === 'Escape') select(null);
       if (e.key === 'r' || e.key === 'R') $('#btn-random').click();
     });

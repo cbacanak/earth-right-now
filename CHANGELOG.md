@@ -23,6 +23,15 @@ recorded here. See [PLAN.md](PLAN.md) for the stage gates.
   near this" list and "show me something" both draw from the active
   categories only. Switched-off events stay on the map, dimmed rather
   than deleted, so the surrounding context is not lost.
+- **Keyboard navigation.** The map is one tab stop rather than one per
+  event, because hundreds of markers in the tab order would be unusable.
+  Focusing it lights a marker; arrow keys move to the nearest event in
+  that direction on screen; Enter or Space opens it. The camera follows
+  focus, moving only when the target would otherwise be off screen and
+  keeping the reader's zoom. Focus is drawn as corner brackets, distinct
+  from the selection's ring and crosshair. The "what else is near this"
+  list and the trail are tab stops in their own right and open on Enter
+  or Space. `R` and `Escape` are unchanged.
 - **Mobile bottom sheet.** Below the breakpoint the detail panel stops
   being a column under the map and becomes a sheet over it, at three
   detents: closed (a 46px handle), half (title and facts), full (the
@@ -93,8 +102,8 @@ absence of category filters clogs the exploration flow. Both findings
 are what Stage 1.5 exists to fix; see PLAN.md §1.
 
 ### Stage 1.5 — UX, navigation, resilience
-_In progress._ Pan and zoom, category filters, the offline cushion and the
-mobile sheet are in; keyboard navigation and telemetry are not. The gate
+_In progress._ Pan and zoom, category filters, the offline cushion, the
+mobile sheet and keyboard navigation are in; telemetry is not. The gate
 test has not been run.
 
 ### Stage 2 — Publish and distribution
