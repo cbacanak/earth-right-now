@@ -21,7 +21,12 @@
   var DBL_FACTOR = 2;     // double-click zoom step
   var WHEEL_K = 0.0018;   // wheel sensitivity
   var DRAG_SLOP = 3;      // CSS px of movement before a click becomes a drag
-  var HIT_PX = 11;        // touch target radius, in screen pixels
+  // Touch targets, as a radius in CSS pixels. 22 gives the 44pt target that
+  // both Apple and Material call the minimum for a fingertip; a mouse is
+  // precise and gets roughly what it had, so pointing on a desktop does not
+  // suddenly start grabbing events the reader did not aim at.
+  var TOUCH_PX = 22;
+  var MOUSE_PX = 12;
   var ANIM_MS = 420;
 
   // Graticule steps, coarse to fine. The camera picks the finest step that
@@ -119,6 +124,8 @@
     this.trackNodes = {};
     this.evById = {};  // id -> event, for arrow navigation
     this.focusId = null;
+    this.lastPointerKind = null;
+    this._coarse = !!(window.matchMedia && window.matchMedia('(any-pointer: coarse)').matches);
 
     this.view = { x: 0, y: 0, w: WORLD_W, h: WORLD_H };
     this._aspect = 0.5;
@@ -134,12 +141,26 @@
     this._filter = null;
 
     var self = this;
+    // Selection is decided by geometry, not by which element happened to be on
+    // top. With fingertip-sized targets the invisible hit areas overlap
+    // constantly, and SVG hit-testing would hand the tap to whichever circle
+    // was drawn last rather than the one the reader was aiming at.
     svg.addEventListener('click', function (ev) {
       if (self.moved) return;           // that was a pan, not a pick
+      var hit = self.nearestTo(ev.clientX, ev.clientY);
+      if (hit) { self.onSelect(hit.id); return; }
+      // A click carrying no usable coordinates (assistive tech, scripted)
+      // still resolves through the element it landed on.
       var mk = ev.target.closest ? ev.target.closest('.mk') : null;
-      if (mk) { self.onSelect(mk.getAttribute('data-id')); return; }
-      self.onSelect(null);              // click on empty grid clears selection
+      self.onSelect(mk ? mk.getAttribute('data-id') : null);
     });
+
+    if (window.matchMedia) {
+      var coarseMq = window.matchMedia('(any-pointer: coarse)');
+      var onCoarse = function () { self._coarse = coarseMq.matches; self.rescale(); };
+      if (coarseMq.addEventListener) coarseMq.addEventListener('change', onCoarse);
+      else if (coarseMq.addListener) coarseMq.addListener(onCoarse);
+    }
 
     this.bindGestures();
     this.bindKeys();
@@ -304,6 +325,7 @@
 
   Map.prototype.onDown = function (e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    this.lastPointerKind = e.pointerType || null;
     this.stopAnim();
     this.pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
 
@@ -503,10 +525,42 @@
     return 1.2;
   }
 
-  // Hit targets stay about HIT_PX wide on screen whatever the zoom.
+  // How far from a marker's centre a tap still counts, in CSS pixels. The
+  // kind of pointer driving this gesture decides, not the device: a touch
+  // laptop should be forgiving under a finger and precise under a mouse.
+  Map.prototype.pickRadiusPx = function () {
+    var k = this.lastPointerKind;
+    if (k === 'touch' || k === 'pen') return TOUCH_PX;
+    if (k === 'mouse') return MOUSE_PX;
+    return this._coarse ? TOUCH_PX : MOUSE_PX;   // nothing has been touched yet
+  };
+
+  // The invisible target under every marker. It never shrinks below the
+  // fingertip minimum, and never below what is actually drawn.
   Map.prototype.hitRadius = function (base) {
-    var zs = this._zs;
-    return Math.min(4 * zs, Math.max((base + 0.5) * zs, HIT_PX * this.unitsPerPx()));
+    var want = (this._coarse ? TOUCH_PX : MOUSE_PX) * this.unitsPerPx();
+    return Math.max(base * this._zs, want);
+  };
+
+  // The visible marker the reader most plausibly meant. Overlaps are settled
+  // by distance to the centre, so the nearest one wins rather than the
+  // topmost, and a tap that lands just off a marker still finds it.
+  Map.prototype.nearestTo = function (clientX, clientY, radiusPx) {
+    var p = this.toView(clientX, clientY);
+    if (!p) return null;
+    var reach = (radiusPx === undefined ? this.pickRadiusPx() : radiusPx) * this.unitsPerPx();
+    var list = this.visibleEvents(), best = null, bestD = Infinity;
+    for (var i = 0; i < list.length; i++) {
+      var ev = list[i];
+      var dx = px(ev.lon) - p.x;
+      if (dx > 180) dx -= 360; else if (dx < -180) dx += 360;
+      var dy = py(ev.lat) - p.y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      // A marker drawn larger than the minimum keeps its own footprint.
+      var own = Math.max(reach, radiusFor(ev) * this._zs);
+      if (d <= own && d < bestD) { bestD = d; best = ev; }
+    }
+    return best;
   };
 
   // Re-apply screen-constant sizes after a zoom or a viewport change.
