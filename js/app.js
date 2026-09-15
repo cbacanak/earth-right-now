@@ -308,6 +308,7 @@
       map.focus(null, []);
       $('#detail').hidden = true;
       $('#empty').hidden = false;
+      if (ERN.drawer && !opts.keepTrail) ERN.drawer.close();
       if (!opts.fromHash && location.hash) history.replaceState(null, '', location.pathname + location.search);
       return;
     }
@@ -316,7 +317,10 @@
     map.focus(ev, near.items);
     renderDetail(ev, near);
     if (!opts.fromHash) history.replaceState(null, '', '#' + ev.id);
-    if (!opts.keepTrail) $('#panel').scrollTop = 0;
+    if (!opts.keepTrail) {
+      $('#panel-body').scrollTop = 0;
+      if (ERN.drawer) ERN.drawer.reveal();   // a pick brings the sheet up on mobile
+    }
   }
 
   function renderDetail(ev, near) {

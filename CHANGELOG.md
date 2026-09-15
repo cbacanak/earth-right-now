@@ -23,6 +23,19 @@ recorded here. See [PLAN.md](PLAN.md) for the stage gates.
   near this" list and "show me something" both draw from the active
   categories only. Switched-off events stay on the map, dimmed rather
   than deleted, so the surrounding context is not lost.
+- **Mobile bottom sheet.** Below the breakpoint the detail panel stops
+  being a column under the map and becomes a sheet over it, at three
+  detents: closed (a 46px handle), half (title and facts), full (the
+  neighbour list as well). The map takes the whole area underneath, so
+  closing the sheet really does hand the map the screen. Picking an event
+  brings a closed sheet up to half; clearing the selection closes it.
+  The handle is a real button, reachable by tab, and a closed sheet is
+  taken out of the tab order. Desktop is untouched.
+- The camera now takes the shape of its element instead of a fixed 2:1.
+  A camera locked to the world's proportions sat in black bands on a
+  portrait phone, so closing the sheet would have revealed nothing but
+  more black. The whole-world view on a portrait screen still letterboxes,
+  which is the right trade.
 - **Offline cushion.** Each source keeps its own timestamped snapshot in
   `localStorage`. A snapshot paints the map immediately on load and is
   replaced the moment the network answers; if the network never answers,
@@ -80,8 +93,8 @@ absence of category filters clogs the exploration flow. Both findings
 are what Stage 1.5 exists to fix; see PLAN.md §1.
 
 ### Stage 1.5 — UX, navigation, resilience
-_In progress._ Pan and zoom, category filters and the offline cushion are
-in; mobile drawer, keyboard navigation and telemetry are not. The gate
+_In progress._ Pan and zoom, category filters, the offline cushion and the
+mobile sheet are in; keyboard navigation and telemetry are not. The gate
 test has not been run.
 
 ### Stage 2 — Publish and distribution
