@@ -53,7 +53,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   padding: 8px 14px;
   border-bottom: 1px solid var(--line);
   font-size: 11px;
@@ -80,6 +81,41 @@ body {
 .feed.stale .dot { background: var(--warn); }
 
 @keyframes blink { 50% { opacity: 0.2; } }
+
+/* ---------- category filters ---------- */
+
+.filters { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
+
+.f-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 120ms, color 120ms, border-color 120ms;
+}
+.f-btn i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--fg-dim); }
+.f-btn b { font-weight: normal; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.f-btn:hover { border-color: var(--fg-dim); }
+.f-btn:focus-visible { outline: 1px solid var(--fg); outline-offset: 1px; }
+
+.f-btn[aria-pressed="true"] { color: var(--fg); border-color: var(--line); }
+.f-btn[aria-pressed="true"] b { color: var(--fg-muted); }
+.f-btn[aria-pressed="false"] { opacity: 0.42; }
+.f-btn[aria-pressed="false"] i { background: var(--fg-dim) !important; }
+
+.f-btn[data-kind="earthquake"] i { background: var(--c-earthquake); }
+.f-btn[data-kind="wildfires"] i { background: var(--c-wildfires); }
+.f-btn[data-kind="volcanoes"] i { background: var(--c-volcanoes); }
+.f-btn[data-kind="severeStorms"] i { background: var(--c-severeStorms); }
+.f-btn[data-kind="seaLakeIce"] i { background: var(--c-seaLakeIce); }
 
 /* ---------- layout ---------- */
 
@@ -177,12 +213,23 @@ body {
   100% { transform: scale(2.2); stroke-opacity: 0; }
 }
 
-/* dimming: when something is selected, unrelated events recede */
-#markers.focused .mk { opacity: 0.22; transition: opacity 240ms; }
+/* Two independent reasons to recede: the category is switched off, or a
+   selection has pushed everything unrelated back. They never stack, and the
+   selected event always reads at full strength even when its own category
+   is off — dimming the thing the panel is describing would be incoherent. */
+#markers .mk { transition: opacity 240ms; }
+#markers .mk.filtered { opacity: 0.18; pointer-events: none; }
+#markers.focused .mk { opacity: 0.22; }
+#markers.focused .mk.filtered { opacity: 0.18; }
 #markers.focused .mk.near { opacity: 1; }
-#markers.focused .mk.selected { opacity: 1; }
+#markers .mk.selected,
+#markers.focused .mk.selected { opacity: 1; pointer-events: auto; }
+
+#tracks .track.filtered { stroke-opacity: 0.08; }
 #tracks.focused .track { stroke-opacity: 0.12; }
-#tracks.focused .track.near, #tracks.focused .track.selected { stroke-opacity: 0.6; }
+#tracks.focused .track.filtered { stroke-opacity: 0.08; }
+#tracks.focused .track.near,
+#tracks.focused .track.selected { stroke-opacity: 0.6; }
 
 .sel-ring {
   fill: none;
@@ -222,6 +269,7 @@ body {
   pointer-events: none;
 }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend span.off { opacity: 0.42; }
 .legend i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .legend b { font-weight: normal; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
 
@@ -280,6 +328,8 @@ body {
   margin-bottom: 8px;
 }
 .kind i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.kind .off { color: var(--fg-dim); letter-spacing: 0.08em; }
+.kind .off::before { content: '· '; }
 
 .title {
   font-size: 16px;
