@@ -149,6 +149,66 @@
     return null;
   }
 
+  // ---- cache: stale-while-revalidate ----
+  //
+  // Each source is stored on its own so one dead feed never takes the other
+  // down with it. A snapshot is served immediately on load and replaced the
+  // moment the network answers; if the network never answers, the snapshot is
+  // what stays on screen, and the HUD says so in words.
+  //
+  // CACHE_MAX_AGE_MS is the honesty limit. USGS is a rolling seven-day window,
+  // so a snapshot older than a day means the newest quake on screen is already
+  // a day old and "right now" has stopped being true. A day is still long
+  // enough to cover the cases where a cache earns its keep: an overnight
+  // outage, a flight, a laptop lid. Past it the snapshot is discarded outright
+  // and the page shows its empty state, because showing nothing is more honest
+  // than showing a week-old Earth that looks live.
+  var CACHE_PREFIX = 'ern.cache.';
+  var CACHE_VERSION = 1;
+  var CACHE_MAX_AGE_MS = 24 * 3600 * 1000;
+
+  function cacheKey(id) { return CACHE_PREFIX + id; }
+
+  function store() {
+    try { return window.localStorage; } catch (e) { return null; }  // blocked in some privacy modes
+  }
+
+  function readCache(id) {
+    var ls = store();
+    if (!ls) return null;
+    var raw;
+    try { raw = ls.getItem(cacheKey(id)); } catch (e) { return null; }
+    if (!raw) return null;
+    var box;
+    try { box = JSON.parse(raw); } catch (e) { dropCache(id); return null; }
+    if (!box || box.v !== CACHE_VERSION || !box.at || !box.events || !box.events.length) {
+      dropCache(id);
+      return null;
+    }
+    var age = Date.now() - box.at;
+    // A negative age means the clock moved; treat it as untrustworthy.
+    if (age < 0 || age > CACHE_MAX_AGE_MS) { dropCache(id); return null; }
+    return { events: box.events, at: box.at, age: age };
+  }
+
+  function writeCache(id, events) {
+    var ls = store();
+    if (!ls || !events || !events.length) return;
+    try {
+      ls.setItem(cacheKey(id), JSON.stringify({ v: CACHE_VERSION, at: Date.now(), events: events }));
+    } catch (e) {
+      // Out of quota or storage refused. The cache is a cushion, not a
+      // requirement, so drop this source's entry and carry on.
+      dropCache(id);
+    }
+  }
+
+  function dropCache(id) {
+    var ls = store();
+    if (!ls) return;
+    try { ls.removeItem(cacheKey(id)); } catch (e) { /* nothing to do */ }
+  }
+
   // ---- fetch with timeout ----
   function getJSON(url, timeoutMs) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -161,19 +221,36 @@
       .finally(function () { if (timer) clearTimeout(timer); });
   }
 
+  function fetcher(id, url, parse, timeoutMs) {
+    return function () {
+      return getJSON(url, timeoutMs).then(function (json) {
+        var events = parse(json);
+        writeCache(id, events);
+        return events;
+      });
+    };
+  }
+
   ERN.sources = {
     usgs: {
       id: 'usgs',
       label: 'USGS',
       url: USGS_URL,
-      load: function () { return getJSON(USGS_URL).then(parseUSGS); }
+      load: fetcher('usgs', USGS_URL, parseUSGS)
     },
     eonet: {
       id: 'eonet',
       label: 'EONET',
       url: EONET_URL,
-      load: function () { return getJSON(EONET_URL, 30000).then(parseEONET); }
+      load: fetcher('eonet', EONET_URL, parseEONET, 30000)
     }
+  };
+
+  ERN.cache = {
+    read: readCache,
+    write: writeCache,
+    drop: dropCache,
+    MAX_AGE_MS: CACHE_MAX_AGE_MS
   };
 
   ERN.parse = { usgs: parseUSGS, eonet: parseEONET };

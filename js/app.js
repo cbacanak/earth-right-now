@@ -33,8 +33,8 @@
     activeFilters: {},   // group key -> on; every key present means ALL
     trail: [],
     feeds: {
-      usgs: { status: 'idle', lastOk: 0, retries: 0, timer: null },
-      eonet: { status: 'idle', lastOk: 0, retries: 0, timer: null }
+      usgs: { status: 'idle', lastOk: 0, cachedAt: 0, retries: 0, timer: null },
+      eonet: { status: 'idle', lastOk: 0, cachedAt: 0, retries: 0, timer: null }
     }
   };
 
@@ -103,28 +103,50 @@
 
   // ---------- feeds ----------
 
+  // cachedAt means: what is on screen was last confirmed then, and is not
+  // being confirmed now. It is set whether the data came out of localStorage
+  // at boot or from a fetch earlier this session that has since stopped
+  // succeeding — from the reader's side those are the same situation.
   function setFeedStatus(id, status, count) {
     var f = state.feeds[id];
-    f.status = status;
+    if (status) f.status = status;
     var node = document.querySelector('.feed[data-source="' + id + '"]');
     if (!node) return;
-    node.className = 'feed ' + status;
+    node.className = 'feed ' + f.status;
     var b = node.querySelector('b');
     if (count !== undefined) b.textContent = count;
-    var title = ERN.sources[id].label + ': ' + status;
-    if (f.lastOk) title += ', updated ' + fmtAgo(f.lastOk);
+    // The dot carries colour; the tag carries the same news in words.
+    node.querySelector('.tag').textContent = f.cachedAt ? 'cached ' + fmtAgo(f.cachedAt) : '';
+    var title = ERN.sources[id].label + ': ' + f.status;
+    if (f.cachedAt) title += ', last confirmed ' + fmtAgo(f.cachedAt);
+    else if (f.lastOk) title += ', updated ' + fmtAgo(f.lastOk);
     node.title = title;
+  }
+
+  // Paint whatever the last session left behind, then go and revalidate it.
+  function hydrate(id) {
+    var c = ERN.cache.read(id);
+    if (!c) return false;
+    state.bySource[id] = c.events;
+    var f = state.feeds[id];
+    f.lastOk = c.at;
+    f.cachedAt = c.at;
+    setFeedStatus(id, 'cached', c.events.length);
+    return true;
   }
 
   function loadSource(id) {
     var src = ERN.sources[id];
     var f = state.feeds[id];
     if (f.timer) { clearTimeout(f.timer); f.timer = null; }
-    setFeedStatus(id, 'loading');
+    // Revalidate quietly when something is already on screen. Only a source
+    // with nothing to show gets to display a loading state.
+    if (!state.bySource[id].length) setFeedStatus(id, 'loading');
 
     src.load().then(function (events) {
       state.bySource[id] = events;
       f.lastOk = Date.now();
+      f.cachedAt = 0;
       f.retries = 0;
       setFeedStatus(id, 'ok', events.length);
       rebuild();
@@ -132,7 +154,12 @@
     }).catch(function (err) {
       console.warn('[' + id + '] load failed:', err && err.message ? err.message : err);
       f.retries++;
-      setFeedStatus(id, 'error', state.bySource[id].length || '–');
+      if (state.bySource[id].length && f.lastOk) {
+        f.cachedAt = f.lastOk;
+        setFeedStatus(id, 'cached', state.bySource[id].length);
+      } else {
+        setFeedStatus(id, 'error', state.bySource[id].length || '–');
+      }
       var wait = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, f.retries - 1));
       f.timer = setTimeout(function () { loadSource(id); }, wait);
       updateHint();
@@ -142,7 +169,6 @@
   function rebuild() {
     state.all = state.bySource.usgs.concat(state.bySource.eonet);
     map.setEvents(state.all);   // every event is drawn; filtering only dims
-    renderLegend();
     renderFilters();
     updateHint();
     $('#btn-random').disabled = pool().length === 0;
@@ -215,7 +241,6 @@
     }
     map.setFilter(active);
     renderFilters();
-    renderLegend();
     updateHint();
     $('#btn-random').disabled = pool().length === 0;
     // A selection survives its own category being switched off; only its
@@ -241,29 +266,21 @@
 
   // ---------- panel ----------
 
-  function renderLegend() {
-    var counts = {};
-    state.all.forEach(function (e) { counts[e.kind] = (counts[e.kind] || 0) + 1; });
-    var root = $('#legend');
-    root.textContent = '';
-    ERN.KIND_ORDER.forEach(function (k) {
-      if (!counts[k]) return;
-      var s = document.createElement('span');
-      if (!kindActive(k)) s.className = 'off';   // agree with the map
-      s.appendChild(kindDot(k));
-      s.appendChild(document.createTextNode(ERN.KIND_LABELS[k] + ' '));
-      var b = document.createElement('b');
-      b.textContent = counts[k];
-      s.appendChild(b);
-      root.appendChild(s);
-    });
-  }
-
   function updateHint() {
     var h = $('#hint');
-    var errs = Object.keys(state.feeds).filter(function (k) { return state.feeds[k].status === 'error'; });
+    var ids = Object.keys(state.feeds);
+    var errs = ids.filter(function (k) { return state.feeds[k].status === 'error'; });
+    var cached = ids.filter(function (k) { return !!state.feeds[k].cachedAt; });
+    h.className = (errs.length || cached.length) ? 'hint warn' : 'hint';
+
     if (errs.length && !state.all.length) {
       h.textContent = 'feeds unreachable — retrying';
+    } else if (cached.length) {
+      var oldest = Math.min.apply(null, cached.map(function (k) { return state.feeds[k].cachedAt; }));
+      var who = cached.length === ids.length
+        ? ''
+        : ' · ' + cached.map(function (k) { return ERN.sources[k].label; }).join(', ');
+      h.textContent = 'showing cached data (' + fmtAgo(oldest) + ')' + who;
     } else if (errs.length) {
       h.textContent = errs.map(function (k) { return ERN.sources[k].label; }).join(', ') + ' unreachable — showing last good data';
     } else if (!state.all.length) {
@@ -385,10 +402,13 @@
     var d = new Date();
     $('#clock').textContent = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + ' UTC';
     // mark feeds stale if a refresh is overdue
+    var anyCached = false;
     Object.keys(state.feeds).forEach(function (k) {
       var f = state.feeds[k];
       if (f.status === 'ok' && Date.now() - f.lastOk > STALE_MS) setFeedStatus(k, 'stale');
+      if (f.cachedAt) { anyCached = true; setFeedStatus(k); }  // keep the age honest
     });
+    if (anyCached) updateHint();
   }
 
   // ---------- boot ----------
@@ -430,6 +450,12 @@
 
     tickClock();
     setInterval(tickClock, 1000);
+
+    // Snapshot first, network second. Each source is cached on its own, so a
+    // dead feed never drags the other one down with it.
+    var fromCache = false;
+    Object.keys(state.feeds).forEach(function (k) { if (hydrate(k)) fromCache = true; });
+    if (fromCache) rebuild();
 
     loadSource('usgs');
     loadSource('eonet');
