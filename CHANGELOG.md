@@ -21,8 +21,17 @@ recorded here. See [PLAN.md](PLAN.md) for the stage gates.
 
 ## Stage test results
 
-### Stage 1 — Mechanic
-_Not started._
+### Stage 1 — Mechanic — PASSED (15 Sep 2026)
+
+Gate question: *do you want to move from one event to the next?*
+
+**Answer: yes.** The mechanic holds. But dense clusters in the Pacific
+and Mediterranean basins make individual events hard to pick, and the
+absence of category filters clogs the exploration flow. Both findings
+are what Stage 1.5 exists to fix; see PLAN.md §1.
+
+### Stage 1.5 — UX, navigation, resilience
+_In progress._
 
 ### Stage 2 — Publish and distribution
 _Not started._
