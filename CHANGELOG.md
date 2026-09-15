@@ -132,7 +132,7 @@ and Mediterranean basins make individual events hard to pick, and the
 absence of category filters clogs the exploration flow. Both findings
 are what Stage 1.5 exists to fix; see PLAN.md §1.
 
-### Stage 1.5 — UX, navigation, resilience — BUILD COMPLETE, GATE NOT RUN
+### Stage 1.5 — UX, navigation, resilience — GATE IN PROGRESS
 
 Every item on the Stage 1.5 task list in PLAN.md §8 has landed:
 
@@ -153,7 +153,27 @@ closing the mobile sheet revealed black rather than map; and the
 graticule subdivides with the camera, without which a zoomed view was an
 empty field.
 
-**The gate test has not been run, and cannot be run from here.** It asks
+**First gate finding (touch targets).** On a phone the markers were very
+hard to hit. The Stage 1 clog had not gone, it had moved: from "which one
+do I pick" to "I cannot pick any". The cause was scale. Marker size
+carries magnitude, so a small event is a few pixels across, while a
+fingertip is about 44pt. Those were targets designed for a mouse.
+
+Fixed without changing anything the reader sees. Every marker now carries
+an invisible target of at least 44pt, and which marker a tap selects is
+decided by distance to the centre rather than by which invisible circle
+happened to be drawn on top. A tap that lands just off a marker still
+finds the nearest one within reach.
+
+Reach is set by the pointer that made the gesture, not by the device, so
+a touch laptop is forgiving under a finger and precise under a mouse: 22
+pixels for a finger or a pen, which is exactly the 44pt target, and 12
+for a mouse, which is roughly what the desktop already had. One number
+rather than two: snapping to the nearest marker within reach *is* the
+44pt target, with overlaps resolved by centre distance.
+
+**The rest of the gate test has not been run, and cannot be run from
+here.** It asks
 whether, on a phone and on a desktop, clicking an earthquake focuses the
 map smoothly, whether the felt ring and the neighbouring events read at a
 glance, whether the filters respond without lag, and whether the whole
@@ -162,11 +182,13 @@ browser on real data, and the sandbox this was built in cannot reach
 usgs.gov or nasa.gov.
 
 Everything here was verified against mocked feeds in headless Chromium:
-207 checks across seven suites, covering gestures and their boundaries,
+230 checks across eight suites, covering gestures and their boundaries,
 filter and cache behaviour, the sheet detents, keyboard roving, the
-palette and its measured contrast, and the intensity model with all four
-of its refusal branches. What none of that can tell you is whether the
-thing is good to use.
+palette and its measured contrast, touch targets under a simulated
+finger, and the intensity model with all four of its refusal branches.
+What none of that can tell you is whether the thing is good to use; the
+touch-target finding above is exactly what a real phone told us and no
+amount of headless testing had.
 
 ### Stage 2 — Publish and distribution
 _Not started._
