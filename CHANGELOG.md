@@ -132,11 +132,41 @@ and Mediterranean basins make individual events hard to pick, and the
 absence of category filters clogs the exploration flow. Both findings
 are what Stage 1.5 exists to fix; see PLAN.md §1.
 
-### Stage 1.5 — UX, navigation, resilience
-_In progress._ Pan and zoom, category filters, the offline cushion, the
-every build item is in: pan and zoom, filters, the offline cushion, the
-mobile sheet, keyboard navigation, the palette and telemetry. The gate
-test has not been run.
+### Stage 1.5 — UX, navigation, resilience — BUILD COMPLETE, GATE NOT RUN
+
+Every item on the Stage 1.5 task list in PLAN.md §8 has landed:
+
+- [x] Pan and zoom on the SVG viewBox, and smooth framing on selection
+- [x] `state.activeFilters` and a filtered render
+- [x] Category buttons and counts in the top bar
+- [x] Impact ring, direction vectors and the depth scale
+- [x] `localStorage` stale-while-revalidate with a HUD warning
+- [x] Mobile bottom sheet
+- [x] Keyboard navigation for the markers and the neighbour list
+- [x] Palette cut to the four colours of PLAN §4.1
+- [x] This changelog
+
+Two things the list did not ask for came with the work and are recorded
+so they are not mistaken for scope that arrived from nowhere: the camera
+takes the shape of its element rather than a fixed 2:1, without which
+closing the mobile sheet revealed black rather than map; and the
+graticule subdivides with the camera, without which a zoomed view was an
+empty field.
+
+**The gate test has not been run, and cannot be run from here.** It asks
+whether, on a phone and on a desktop, clicking an earthquake focuses the
+map smoothly, whether the felt ring and the neighbouring events read at a
+glance, whether the filters respond without lag, and whether the whole
+thing can be driven from the keyboard. That is a question about a real
+browser on real data, and the sandbox this was built in cannot reach
+usgs.gov or nasa.gov.
+
+Everything here was verified against mocked feeds in headless Chromium:
+207 checks across seven suites, covering gestures and their boundaries,
+filter and cache behaviour, the sheet detents, keyboard roving, the
+palette and its measured contrast, and the intensity model with all four
+of its refusal branches. What none of that can tell you is whether the
+thing is good to use.
 
 ### Stage 2 — Publish and distribution
 _Not started._
