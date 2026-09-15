@@ -43,6 +43,22 @@
   // what the reader can see, not about great circles.
   var ARROWS = { ArrowUp: 0, ArrowRight: 90, ArrowDown: 180, ArrowLeft: 270,
                  Up: 0, Right: 90, Down: 180, Left: 270 };
+  // Marker silhouettes, drawn in a unit frame and scaled into place. Colour is
+  // the fast read, but it is never the only one: four colours cover seven
+  // kinds, and under deuteranopia two of them are nearly the same colour, so
+  // the shape is what actually tells the categories apart. Areas are balanced
+  // against a unit circle so no category looks heavier than another.
+  var SHAPES = {
+    earthquake:   'M0,-1A1,1 0 1,1 0,1A1,1 0 1,1 0,-1Z',
+    wildfires:    'M0,-1.25L1.25,0L0,1.25L-1.25,0Z',
+    volcanoes:    'M0,-1.5L1.3,0.78L-1.3,0.78Z',
+    severeStorms: 'M-0.89,-0.89H0.89V0.89H-0.89Z',
+    floods:       'M-0.89,-0.89H0.89V0.89H-0.89Z',
+    seaLakeIce:   'M0,-1.1L0.95,-0.55L0.95,0.55L0,1.1L-0.95,0.55L-0.95,-0.55Z',
+    other:        'M0,-1.15A1.15,1.15 0 1,1 0,1.15A1.15,1.15 0 1,1 0,-1.15Z' +
+                  'M0,-0.6A0.6,0.6 0 1,0 0,0.6A0.6,0.6 0 1,0 0,-0.6Z'
+  };
+
   var CONE_DEG = 62;     // how far off-axis a candidate may sit
   var EDGE_PAD = 0.12;   // keep the focused marker this far inside the camera
 
@@ -495,11 +511,19 @@
   // Re-apply screen-constant sizes after a zoom or a viewport change.
   Map.prototype.rescale = function () {
     var zs = this._zs;
-    var circles = this.gMarkers.querySelectorAll('circle[data-r]');
-    for (var i = 0; i < circles.length; i++) {
-      var c = circles[i];
-      var base = parseFloat(c.getAttribute('data-r'));
-      c.setAttribute('r', c.getAttribute('class') === 'hit' ? this.hitRadius(base) : base * zs);
+    var nodes = this.gMarkers.querySelectorAll('[data-r]');
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      var base = parseFloat(n.getAttribute('data-r'));
+      if (n.tagName === 'path') {
+        // the silhouette is a unit shape, so only its scale changes
+        n.setAttribute('transform',
+          'translate(' + n.getAttribute('data-x') + ' ' + n.getAttribute('data-y') + ') scale(' + (base * zs) + ')');
+      } else if (n.getAttribute('class') === 'hit') {
+        n.setAttribute('r', this.hitRadius(base));
+      } else {
+        n.setAttribute('r', base * zs);
+      }
     }
     this.drawSelection();
     this.drawFocus();
@@ -529,7 +553,13 @@
       if (r >= 1.6 || stamp - ev.time < FRESH_MS) {
         el('circle', { class: 'halo', cx: x, cy: y, r: (r + 0.6) * zs, 'data-r': r + 0.6 }, g);
       }
-      el('circle', { class: 'core', cx: x, cy: y, r: r * zs, 'data-r': r }, g);
+      el('path', {
+        class: 'core',
+        d: SHAPES[ev.kind] || SHAPES.other,
+        'fill-rule': 'evenodd',
+        transform: 'translate(' + x + ' ' + y + ') scale(' + (r * zs) + ')',
+        'data-r': r, 'data-x': x, 'data-y': y
+      }, g);
       var title = el('title', null, g);
       title.textContent = ev.title;
       self.nodes[ev.id] = g;

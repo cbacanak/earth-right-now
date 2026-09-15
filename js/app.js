@@ -95,9 +95,16 @@
     return ev.mag + (ev.magUnit ? ' ' + ev.magUnit : '');
   }
 
+  // Same silhouettes as the map, so a category reads the same everywhere.
+  var SHAPE_OF = {
+    earthquake: 'circle', wildfires: 'diamond', volcanoes: 'triangle',
+    severeStorms: 'square', floods: 'square', seaLakeIce: 'hex', other: 'ring'
+  };
+
   function kindDot(kind) {
     var i = document.createElement('i');
-    i.style.background = 'var(--c-' + kind + ')';
+    i.className = 'sw sw-' + (SHAPE_OF[kind] || 'ring');
+    i.style.color = 'var(--c-' + kind + ')';
     return i;
   }
 

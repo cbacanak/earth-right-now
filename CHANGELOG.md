@@ -23,6 +23,20 @@ recorded here. See [PLAN.md](PLAN.md) for the stage gates.
   near this" list and "show me something" both draw from the active
   categories only. Switched-off events stay on the map, dimmed rather
   than deleted, so the surrounding context is not lost.
+- **Palette cut to four category colours**, per PLAN section 4.1: amber
+  `#ffb000` for earthquakes, coral `#ff4d2e` for fires, a desaturated
+  magenta `#d94fa8` for volcanoes, and one cold blue `#6ec6d9` for
+  storms, floods and ice. The residual kinds take a neutral grey step
+  rather than a fifth colour. A seismograph does not glow; emphasis lives
+  in the map and the telemetry lines, not in the palette.
+- **Shape is now a second channel.** Every marker was a circle, so colour
+  carried the category alone. Markers are silhouettes: circle for quakes,
+  diamond for fires, triangle for volcanoes, square for storms and
+  floods, hexagon for ice, ring for the residual. The filter bar, the
+  panel chip, the near list and the trail use the same silhouettes.
+  Measured: all five colours clear WCAG AA against the background, and
+  under deuteranopia the magenta and the grey fall to a CIEDE2000
+  distance of 9.5, which is why the shape is not decoration.
 - **Keyboard navigation.** The map is one tab stop rather than one per
   event, because hundreds of markers in the tab order would be unusable.
   Focusing it lights a marker; arrow keys move to the nearest event in
@@ -103,8 +117,8 @@ are what Stage 1.5 exists to fix; see PLAN.md §1.
 
 ### Stage 1.5 — UX, navigation, resilience
 _In progress._ Pan and zoom, category filters, the offline cushion, the
-mobile sheet and keyboard navigation are in; telemetry is not. The gate
-test has not been run.
+mobile sheet, keyboard navigation and the palette are in; telemetry is
+not. The gate test has not been run.
 
 ### Stage 2 — Publish and distribution
 _Not started._

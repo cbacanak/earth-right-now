@@ -14,13 +14,23 @@
   --fg-dim: #46525c;
   --accent: #e8f3ee;
 
-  --c-earthquake: #ffb000;
-  --c-wildfires: #ff4d2e;
-  --c-volcanoes: #ff2ea6;
-  --c-severeStorms: #35d6ff;
-  --c-seaLakeIce: #9fd8ff;
-  --c-floods: #4f7dff;
-  --c-other: #b8c2cc;
+  /* Four category colours, and no more. A seismograph does not glow, and six
+     saturated neons break the rule that the map is the only place with
+     courage. Emphasis lives in the map and the telemetry lines, not in the
+     palette. Ice and storms deliberately share one cold blue; what separates
+     them is the marker shape, because colour never carries meaning alone. */
+  --c-quake: #ffb000;     /* amber   */
+  --c-fire: #ff4d2e;      /* coral   */
+  --c-volcano: #d94fa8;   /* magenta, desaturated from the old neon pink */
+  --c-cold: #6ec6d9;      /* cold blue: storms, floods, ice */
+
+  --c-earthquake: var(--c-quake);
+  --c-wildfires: var(--c-fire);
+  --c-volcanoes: var(--c-volcano);
+  --c-severeStorms: var(--c-cold);
+  --c-seaLakeIce: var(--c-cold);
+  --c-floods: var(--c-cold);
+  --c-other: var(--fg-muted);   /* no category colour: a neutral grey step */
 
   --ok: #3ddc84;
   --warn: #ffb000;
@@ -107,7 +117,7 @@ body {
   cursor: pointer;
   transition: opacity 120ms, color 120ms, border-color 120ms;
 }
-.f-btn i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--fg-dim); }
+.f-btn i { width: 8px; height: 8px; flex: 0 0 auto; color: var(--fg-dim); }
 .f-btn b { font-weight: normal; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
 .f-btn:hover { border-color: var(--fg-dim); }
 .f-btn:focus-visible { outline: 1px solid var(--fg); outline-offset: 1px; }
@@ -115,13 +125,25 @@ body {
 .f-btn[aria-pressed="true"] { color: var(--fg); border-color: var(--line); }
 .f-btn[aria-pressed="true"] b { color: var(--fg-muted); }
 .f-btn[aria-pressed="false"] { opacity: 0.42; }
-.f-btn[aria-pressed="false"] i { background: var(--fg-dim) !important; }
 
-.f-btn[data-kind="earthquake"] i { background: var(--c-earthquake); }
-.f-btn[data-kind="wildfires"] i { background: var(--c-wildfires); }
-.f-btn[data-kind="volcanoes"] i { background: var(--c-volcanoes); }
-.f-btn[data-kind="severeStorms"] i { background: var(--c-severeStorms); }
-.f-btn[data-kind="seaLakeIce"] i { background: var(--c-seaLakeIce); }
+.f-btn[data-kind="earthquake"] i { color: var(--c-earthquake); }
+.f-btn[data-kind="wildfires"] i { color: var(--c-wildfires); }
+.f-btn[data-kind="volcanoes"] i { color: var(--c-volcanoes); }
+.f-btn[data-kind="severeStorms"] i { color: var(--c-severeStorms); }
+.f-btn[data-kind="seaLakeIce"] i { color: var(--c-seaLakeIce); }
+
+/* ---------- category swatches ---------- */
+
+/* Shape is the second channel. Under deuteranopia the magenta and the grey
+   are all but the same colour, so the silhouette is what actually separates
+   the categories; the colour is the fast read for everyone else. */
+.sw { background: currentColor; display: inline-block; }
+.sw-circle { border-radius: 50%; }
+.sw-square { border-radius: 0; }
+.sw-diamond { border-radius: 0; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+.sw-triangle { border-radius: 0; clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+.sw-hex { border-radius: 0; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); }
+.sw-ring { border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
 
 /* ---------- layout ---------- */
 
@@ -402,7 +424,7 @@ body {
   color: var(--fg-muted);
   margin-bottom: 8px;
 }
-.kind i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.kind i { width: 9px; height: 9px; flex: 0 0 auto; }
 .kind .off { color: var(--fg-dim); letter-spacing: 0.08em; }
 .kind .off::before { content: '· '; }
 
@@ -449,14 +471,14 @@ body {
   outline-offset: -1px;
   background: rgba(255,255,255,0.04);
 }
-.near li i { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; display: inline-block; }
+.near li i { width: 8px; height: 8px; margin-top: 5px; }
 .near .n-title { color: var(--fg); }
 .near .n-meta { color: var(--fg-muted); font-size: 11px; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
 .trail li { display: flex; gap: 8px; padding: 3px 0; color: var(--fg-muted); font-size: 11px; cursor: pointer; }
 .trail li:hover { color: var(--fg); }
 .trail li.current { color: var(--fg); }
-.trail li i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-top: 5px; flex: 0 0 auto; }
+.trail li i { width: 7px; height: 7px; margin-top: 5px; flex: 0 0 auto; }
 .trail li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) {
