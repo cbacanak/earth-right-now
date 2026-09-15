@@ -37,6 +37,15 @@
   var FRAME_PAD = 1.7;
   var FRAME_MAX_KM = 2000; // neighbours further out do not drag the frame open
 
+  // Keyboard navigation. Hundreds of markers cannot all be tab stops, so the
+  // map is a single stop and arrow keys rove within it. Direction is measured
+  // on screen rather than as a true bearing: an arrow key is a statement about
+  // what the reader can see, not about great circles.
+  var ARROWS = { ArrowUp: 0, ArrowRight: 90, ArrowDown: 180, ArrowLeft: 270,
+                 Up: 0, Right: 90, Down: 180, Left: 270 };
+  var CONE_DEG = 62;     // how far off-axis a candidate may sit
+  var EDGE_PAD = 0.12;   // keep the focused marker this far inside the camera
+
   function el(name, attrs, parent) {
     var n = document.createElementNS(NS, name);
     if (attrs) for (var k in attrs) n.setAttribute(k, attrs[k]);
@@ -87,8 +96,12 @@
     this.gLinks = svg.querySelector('#links');
     this.gMarkers = svg.querySelector('#markers');
     this.gSel = svg.querySelector('#selection');
+    this.gFocus = svg.querySelector('#focus');
+    this.live = document.getElementById('map-live');
     this.nodes = {};   // id -> marker group
     this.trackNodes = {};
+    this.evById = {};  // id -> event, for arrow navigation
+    this.focusId = null;
 
     this.view = { x: 0, y: 0, w: WORLD_W, h: WORLD_H };
     this._aspect = 0.5;
@@ -112,6 +125,7 @@
     });
 
     this.bindGestures();
+    this.bindKeys();
 
     var resizeTimer = null;
     window.addEventListener('resize', function () {
@@ -488,6 +502,7 @@
       c.setAttribute('r', c.getAttribute('class') === 'hit' ? this.hitRadius(base) : base * zs);
     }
     this.drawSelection();
+    this.drawFocus();
   };
 
   // ---------- events ----------
@@ -499,6 +514,7 @@
     this.gTracks.textContent = '';
     this.nodes = {};
     this.trackNodes = {};
+    this.evById = {};
     var zs = this._zs;
 
     // bigger / older underneath, small and fresh on top
@@ -507,7 +523,7 @@
     sorted.forEach(function (ev) {
       if (ev.track) self.drawTrack(ev);
       var r = radiusFor(ev);
-      var g = el('g', { class: 'mk k-' + ev.kind + (stamp - ev.time < FRESH_MS ? ' fresh' : ''), 'data-id': ev.id, 'data-kind': ev.kind }, self.gMarkers);
+      var g = el('g', { id: domId(ev.id), class: 'mk k-' + ev.kind + (stamp - ev.time < FRESH_MS ? ' fresh' : ''), 'data-id': ev.id, 'data-kind': ev.kind }, self.gMarkers);
       var x = px(ev.lon), y = py(ev.lat);
       el('circle', { class: 'hit', cx: x, cy: y, r: self.hitRadius(r), 'data-r': r }, g);
       if (r >= 1.6 || stamp - ev.time < FRESH_MS) {
@@ -517,8 +533,12 @@
       var title = el('title', null, g);
       title.textContent = ev.title;
       self.nodes[ev.id] = g;
+      self.evById[ev.id] = ev;
     });
     this.applyFilter();
+    // the focused node was just destroyed and rebuilt
+    if (this.focusId && !this.evById[this.focusId]) this.focusId = null;
+    this.drawFocus();
   };
 
   // Dim the categories that are switched off. They stay on the map on purpose:
@@ -647,6 +667,142 @@
   // Back to the whole world.
   Map.prototype.reset = function () {
     this.animateTo({ x: 0, y: 0, w: WORLD_W, h: 0 });
+  };
+
+  // ---------- keyboard ----------
+
+  function domId(id) { return 'mk-' + String(id).replace(/[^A-Za-z0-9_-]/g, '_'); }
+
+  // Screen-space offset from a to b, unwrapped across the antimeridian so the
+  // shorter way round is always the one the arrow keys take.
+  function offset(a, b) {
+    var dx = px(b.lon) - px(a.lon);
+    if (dx > 180) dx -= 360;
+    else if (dx < -180) dx += 360;
+    return { dx: dx, dy: py(b.lat) - py(a.lat) };
+  }
+
+  Map.prototype.visibleEvents = function () {
+    var out = [], f = this._filter;
+    for (var id in this.evById) {
+      if (!this.evById.hasOwnProperty(id)) continue;
+      var ev = this.evById[id];
+      if (f && !f[ev.kind]) continue;   // switched-off categories are not targets
+      out.push(ev);
+    }
+    return out;
+  };
+
+  // Nearest visible event in a screen direction. Off-axis candidates are
+  // penalised rather than excluded outright, so a slightly diagonal neighbour
+  // still wins over a distant one dead ahead.
+  Map.prototype.neighbourIn = function (from, dirDeg) {
+    var list = this.visibleEvents(), best = null, bestScore = Infinity;
+    for (var i = 0; i < list.length; i++) {
+      var o = list[i];
+      if (o.id === from.id) continue;
+      var d = offset(from, o);
+      var dist = Math.sqrt(d.dx * d.dx + d.dy * d.dy);
+      if (dist < 1e-9) continue;
+      var ang = (Math.atan2(d.dx, -d.dy) * 180 / Math.PI + 360) % 360;
+      var off = Math.abs(((ang - dirDeg + 540) % 360) - 180);
+      if (off > CONE_DEG) continue;
+      var score = dist / Math.cos(off * Math.PI / 180);
+      if (score < bestScore) { bestScore = score; best = o; }
+    }
+    return best;
+  };
+
+  // Where to land when the map first takes the keyboard: the current selection
+  // if there is one, otherwise whatever sits closest to the middle of the view.
+  Map.prototype.firstFocus = function () {
+    if (this.focusId && this.evById[this.focusId]) return this.evById[this.focusId];
+    if (this._selEv && this.evById[this._selEv.id]) return this._selEv;
+    var v = this.view, cx = v.x + v.w / 2, cy = v.y + v.h / 2;
+    var list = this.visibleEvents(), best = null, bestD = Infinity;
+    for (var i = 0; i < list.length; i++) {
+      var dx = px(list[i].lon) - cx, dy = py(list[i].lat) - cy;
+      var d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = list[i]; }
+    }
+    return best;
+  };
+
+  Map.prototype.focusMarker = function (ev) {
+    if (!ev) return;
+    this.focusId = ev.id;
+    var node = this.nodes[ev.id];
+    if (node) this.svg.setAttribute('aria-activedescendant', node.id);
+    this.drawFocus();
+    this.ensureVisible(ev);
+    if (this.live) this.live.textContent = ev.kindLabel + '. ' + ev.title + '.';
+  };
+
+  Map.prototype.clearFocus = function () {
+    this.focusId = null;
+    this.svg.removeAttribute('aria-activedescendant');
+    this.gFocus.textContent = '';
+    if (this.live) this.live.textContent = '';
+  };
+
+  // Corner brackets, not a ring: the selection already owns the ring and the
+  // crosshair, and a reader moving the keyboard needs to tell the two apart.
+  Map.prototype.drawFocus = function () {
+    this.gFocus.textContent = '';
+    if (!this.focusId) return;
+    var ev = this.evById[this.focusId];
+    if (!ev) return;
+    var zs = this._zs;
+    var x = px(ev.lon), y = py(ev.lat);
+    var r = (radiusFor(ev) + 2.2) * zs;
+    var arm = r * 0.55;
+    var g = this.gFocus;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+      var cx = x + c[0] * r, cy = y + c[1] * r;
+      el('path', {
+        class: 'focus-reticle',
+        d: 'M' + (cx - c[0] * arm) + ' ' + cy + ' L' + cx + ' ' + cy + ' L' + cx + ' ' + (cy - c[1] * arm)
+      }, g);
+    });
+  };
+
+  // Focusing something off screen is useless, so the camera follows. It only
+  // moves when it has to, and it keeps the reader's zoom.
+  Map.prototype.ensureVisible = function (ev) {
+    var v = this.view;
+    var x = px(ev.lon), y = py(ev.lat);
+    var mx = v.w * EDGE_PAD, my = v.h * EDGE_PAD;
+    if (x >= v.x + mx && x <= v.x + v.w - mx && y >= v.y + my && y <= v.y + v.h - my) return;
+    this.animateTo({ x: x - v.w / 2, y: y - v.h / 2, w: v.w, h: v.h });
+  };
+
+  Map.prototype.bindKeys = function () {
+    var self = this, svg = this.svg;
+
+    svg.addEventListener('focus', function () {
+      if (!self.focusId) self.focusMarker(self.firstFocus());
+      else self.drawFocus();
+    });
+    svg.addEventListener('blur', function () { self.clearFocus(); });
+
+    svg.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        if (!self.focusId) return;
+        e.preventDefault();
+        self.onSelect(self.focusId);
+        return;
+      }
+      var dir = ARROWS[e.key];
+      if (dir === undefined) return;   // R and Escape stay with the document
+      e.preventDefault();               // otherwise the page scrolls
+      var from = self.evById[self.focusId] || self.firstFocus();
+      if (!from) return;
+      if (!self.focusId) { self.focusMarker(from); return; }
+      var next = self.neighbourIn(from, dir);
+      if (next) self.focusMarker(next);
+    });
   };
 
   ERN.Map = Map;
