@@ -79,6 +79,12 @@ body {
 .feed.loading .dot { background: var(--warn); animation: blink 1s steps(2) infinite; }
 .feed.error .dot { background: var(--err); box-shadow: 0 0 6px var(--err); }
 .feed.stale .dot { background: var(--warn); }
+.feed.cached .dot { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+
+/* The dot is the glance; the tag is the same news in words, for anyone who
+   cannot separate amber from green. */
+.feed .tag { font-style: normal; color: var(--warn); letter-spacing: 0.04em; }
+.feed .tag:not(:empty) { margin-left: 6px; }
 
 @keyframes blink { 50% { opacity: 0.2; } }
 
@@ -255,24 +261,8 @@ body {
 .k-floods { fill: var(--c-floods); stroke: var(--c-floods); }
 .k-other { fill: var(--c-other); stroke: var(--c-other); }
 
-/* legend + hint overlaid on map */
-.legend {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--fg-muted);
-  pointer-events: none;
-}
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.legend span.off { opacity: 0.42; }
-.legend i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.legend b { font-weight: normal; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
-
+/* hint overlaid on the map. The category counts that used to sit bottom-left
+   moved into the filter bar, which shows the same numbers and can act on them. */
 .hint {
   position: absolute;
   right: 12px;
@@ -284,9 +274,9 @@ body {
   text-align: right;
   max-width: 60%;
 }
+.hint.warn { color: var(--warn); }
 
 @media (max-width: 860px) {
-  .legend { display: none; }
   .hint { display: none; }
 }
 

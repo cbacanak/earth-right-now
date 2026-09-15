@@ -23,6 +23,26 @@ recorded here. See [PLAN.md](PLAN.md) for the stage gates.
   near this" list and "show me something" both draw from the active
   categories only. Switched-off events stay on the map, dimmed rather
   than deleted, so the surrounding context is not lost.
+- **Offline cushion.** Each source keeps its own timestamped snapshot in
+  `localStorage`. A snapshot paints the map immediately on load and is
+  replaced the moment the network answers; if the network never answers,
+  the snapshot is what stays on screen and the HUD says
+  `showing cached data (Xm ago)` in amber text. Feed dots read `cached`
+  in words as well as colour, so the state does not depend on telling
+  amber from green. The two sources are independent: one dead feed never
+  takes the other down.
+- Snapshots expire after 24 hours and are then discarded rather than
+  shown. A USGS snapshot older than a day means the newest quake on
+  screen is already a day old, and a map that looks live but is not is
+  worse than an empty one.
+
+### Removed
+
+- The category legend in the bottom-left corner of the map. The filter
+  bar carries the same counts and can act on them.
+
+### Added (continued)
+
 - A selection survives its own category being switched off. It stays
   selected and fully lit, the panel marks it "filtered out", and its
   neighbourhood is recomputed against the narrowed pool.
@@ -60,9 +80,9 @@ absence of category filters clogs the exploration flow. Both findings
 are what Stage 1.5 exists to fix; see PLAN.md §1.
 
 ### Stage 1.5 — UX, navigation, resilience
-_In progress._ Pan and zoom and category filters are in; cache, mobile
-drawer, keyboard navigation and telemetry are not. The gate test has not
-been run.
+_In progress._ Pan and zoom, category filters and the offline cushion are
+in; mobile drawer, keyboard navigation and telemetry are not. The gate
+test has not been run.
 
 ### Stage 2 — Publish and distribution
 _Not started._
