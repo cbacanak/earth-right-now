@@ -55,12 +55,21 @@
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  // The camera never leaves the world, and never zooms past the limits.
-  // Height follows width so the 2:1 world aspect is preserved and nothing
-  // is ever stretched.
-  function clampView(v) {
+  // The camera never leaves the world and never zooms past the limits.
+  //
+  // Its height follows the shape of the element rather than the 2:1 shape of
+  // the world. preserveAspectRatio="meet" letterboxes whatever does not match,
+  // so a camera locked at 2:1 inside a tall phone screen would put black bands
+  // above and below the map and closing the sheet would reveal nothing but
+  // more black. Matching the element means a zoomed-in view fills the screen.
+  // The one case that cannot be satisfied is the whole world on a portrait
+  // screen: there the height is capped at the world and the bands come back,
+  // which is the right trade, because seeing all of Earth at once matters more
+  // than filling the glass.
+  function clampView(v, aspect) {
+    var a = aspect || 0.5;
     var w = Math.max(MIN_W, Math.min(MAX_W, v.w));
-    var h = w / 2;
+    var h = Math.min(WORLD_H, w * a);
     return {
       x: Math.max(0, Math.min(WORLD_W - w, v.x)),
       y: Math.max(0, Math.min(WORLD_H - h, v.y)),
@@ -82,6 +91,7 @@
     this.trackNodes = {};
 
     this.view = { x: 0, y: 0, w: WORLD_W, h: WORLD_H };
+    this._aspect = 0.5;
     this._zs = 1;
     this._raf = 0;
     this._anim = 0;
@@ -106,9 +116,14 @@
     var resizeTimer = null;
     window.addEventListener('resize', function () {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function () { self.rescale(); }, 150);
+      resizeTimer = setTimeout(function () {
+        self.measure();
+        self.setView(self.view);   // re-clamp: the element's shape just changed
+        self.rescale();
+      }, 150);
     });
 
+    this.measure();
     this.applyView();
   }
 
@@ -127,6 +142,13 @@
     return { x: v.x + (clientX - r.left - ox) / s, y: v.y + (clientY - r.top - oy) / s };
   };
 
+  // Cached so a drag does not force a layout read on every frame.
+  Map.prototype.measure = function () {
+    var r = this.svg.getBoundingClientRect();
+    this._aspect = (r.width && r.height) ? r.height / r.width : 0.5;
+    return this._aspect;
+  };
+
   Map.prototype.unitsPerPx = function () {
     var r = this.svg.getBoundingClientRect();
     var v = this.view;
@@ -135,7 +157,7 @@
   };
 
   Map.prototype.setView = function (v) {
-    this.view = clampView(v);
+    this.view = clampView(v, this._aspect);
     if (this._raf) return;
     var self = this;
     this._raf = requestAnimationFrame(function () {
@@ -165,7 +187,7 @@
   Map.prototype.animateTo = function (target) {
     var self = this;
     var from = this.view;
-    var to = clampView(target);
+    var to = clampView(target, this._aspect);
     this.stopAnim();
     var far = Math.abs(to.x - from.x) + Math.abs(to.y - from.y) + Math.abs(to.w - from.w);
     if (reduceMotion() || far < 0.01) { this.setView(to); return; }
@@ -179,7 +201,7 @@
         y: from.y + (to.y - from.y) * e,
         w: from.w + (to.w - from.w) * e,
         h: 0
-      });
+      }, self._aspect);
       self.applyView();
       self._anim = k < 1 ? requestAnimationFrame(step) : 0;
     });
@@ -189,7 +211,7 @@
   Map.prototype.zoomAt = function (clientX, clientY, factor, animate) {
     var v = this.view;
     var nw = Math.max(MIN_W, Math.min(MAX_W, v.w / factor));
-    var nh = nw / 2;
+    var nh = Math.min(WORLD_H, nw * this._aspect);
     var p = this.toView(clientX, clientY) || { x: v.x + v.w / 2, y: v.y + v.h / 2 };
     var rx = (p.x - v.x) / v.w;
     var ry = (p.y - v.y) / v.h;
@@ -609,7 +631,8 @@
       if (o.lat > maxLat) maxLat = o.lat;
     }
     // The camera is 2:1, so a latitude span needs twice its width.
-    var span = Math.max((maxLon - minLon) * FRAME_PAD, (maxLat - minLat) * FRAME_PAD * 2);
+    var a = this._aspect || 0.5;
+    var span = Math.max((maxLon - minLon) * FRAME_PAD, ((maxLat - minLat) * FRAME_PAD) / a);
     // A lone event gets a wide frame for context. A tight cluster gets pulled
     // right in — separating events that sit on the same pixel is the reason
     // zoom exists here at all.
@@ -617,12 +640,13 @@
     w = Math.max(MIN_W, Math.min(FRAME_MAX_W, w));
     var cx = px((minLon + maxLon) / 2);
     var cy = py((minLat + maxLat) / 2);
-    this.animateTo({ x: cx - w / 2, y: cy - w / 4, w: w, h: w / 2 });
+    var fh = Math.min(WORLD_H, w * this._aspect);
+    this.animateTo({ x: cx - w / 2, y: cy - fh / 2, w: w, h: fh });
   };
 
   // Back to the whole world.
   Map.prototype.reset = function () {
-    this.animateTo({ x: 0, y: 0, w: WORLD_W, h: WORLD_H });
+    this.animateTo({ x: 0, y: 0, w: WORLD_W, h: 0 });
   };
 
   ERN.Map = Map;

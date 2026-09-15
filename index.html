@@ -49,6 +49,13 @@
     </section>
 
     <aside class="panel" id="panel">
+      <button type="button" class="drawer-handle" id="drawer-handle"
+              aria-expanded="false" aria-controls="panel-body">
+        <span class="grip" aria-hidden="true"></span>
+        <span class="drawer-label">DETAIL</span>
+      </button>
+
+      <div class="panel-body" id="panel-body">
       <div class="panel-top">
         <button class="btn-random" id="btn-random" type="button" title="Jump to a random event">show me something</button>
       </div>
@@ -75,12 +82,14 @@
         <h2 class="section">trail</h2>
         <ol class="trail" id="trail"></ol>
       </div>
+      </div>
     </aside>
   </main>
 
   <script src="js/sources.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/map.js"></script>
+  <script src="js/drawer.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
