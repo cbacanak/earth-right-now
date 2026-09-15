@@ -130,25 +130,25 @@ body {
 
 .map-bg { fill: var(--bg); }
 
-.grat { stroke: var(--grid-faint); stroke-width: 0.15; fill: none; }
-.grat.major { stroke: var(--grid); stroke-width: 0.2; }
-.grat.zero { stroke: var(--grid-strong); stroke-width: 0.25; }
-.grat.dashed { stroke-dasharray: 1 1.2; }
+.grat { stroke: var(--grid-faint); stroke-width: calc(0.15 * var(--zs, 1)); fill: none; }
+.grat.major { stroke: var(--grid); stroke-width: calc(0.2 * var(--zs, 1)); }
+.grat.zero { stroke: var(--grid-strong); stroke-width: calc(0.25 * var(--zs, 1)); }
+.grat.dashed { stroke-dasharray: calc(1 * var(--zs, 1)) calc(1.2 * var(--zs, 1)); }
 
 .map-label {
   fill: var(--fg-dim);
   font-family: var(--mono);
-  font-size: 2.8px;
-  letter-spacing: 0.1px;
+  font-size: calc(2.8px * var(--zs, 1));
+  letter-spacing: calc(0.1px * var(--zs, 1));
   user-select: none;
   pointer-events: none;
 }
 
-.tick { stroke: var(--grid-strong); stroke-width: 0.25; }
+.tick { stroke: var(--grid-strong); stroke-width: calc(0.25 * var(--zs, 1)); }
 
 .track {
   fill: none;
-  stroke-width: 0.25;
+  stroke-width: calc(0.25 * var(--zs, 1));
   stroke-opacity: 0.45;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -157,15 +157,15 @@ body {
 
 .link {
   stroke: var(--accent);
-  stroke-width: 0.18;
+  stroke-width: calc(0.18 * var(--zs, 1));
   stroke-opacity: 0.35;
-  stroke-dasharray: 0.6 0.5;
+  stroke-dasharray: calc(0.6 * var(--zs, 1)) calc(0.5 * var(--zs, 1));
   pointer-events: none;
 }
 
 .mk { cursor: pointer; }
 .mk circle.core { fill-opacity: 0.9; stroke: none; }
-.mk circle.halo { fill: none; stroke-width: 0.15; stroke-opacity: 0.45; pointer-events: none; }
+.mk circle.halo { fill: none; stroke-width: calc(0.15 * var(--zs, 1)); stroke-opacity: 0.45; pointer-events: none; }
 .mk:hover circle.core { fill-opacity: 1; }
 
 /* a little hit area, invisible */
@@ -187,7 +187,7 @@ body {
 .sel-ring {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 0.25;
+  stroke-width: calc(0.25 * var(--zs, 1));
   animation: ping-slow 1.8s ease-out infinite;
   transform-box: fill-box;
   transform-origin: center;
@@ -197,7 +197,7 @@ body {
   0%   { transform: scale(0.5); stroke-opacity: 0.9; }
   100% { transform: scale(2.4); stroke-opacity: 0; }
 }
-.sel-cross { stroke: var(--accent); stroke-width: 0.2; stroke-opacity: 0.7; pointer-events: none; }
+.sel-cross { stroke: var(--accent); stroke-width: calc(0.2 * var(--zs, 1)); stroke-opacity: 0.7; pointer-events: none; }
 
 /* colours by kind */
 .k-earthquake { fill: var(--c-earthquake); stroke: var(--c-earthquake); }
