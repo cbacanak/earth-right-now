@@ -91,6 +91,7 @@
     this.lonLabels = [];
     this.latLabels = [];
     this._grid = null;
+    this._filter = null;
 
     var self = this;
     svg.addEventListener('click', function (ev) {
@@ -484,7 +485,7 @@
     sorted.forEach(function (ev) {
       if (ev.track) self.drawTrack(ev);
       var r = radiusFor(ev);
-      var g = el('g', { class: 'mk k-' + ev.kind + (stamp - ev.time < FRESH_MS ? ' fresh' : ''), 'data-id': ev.id }, self.gMarkers);
+      var g = el('g', { class: 'mk k-' + ev.kind + (stamp - ev.time < FRESH_MS ? ' fresh' : ''), 'data-id': ev.id, 'data-kind': ev.kind }, self.gMarkers);
       var x = px(ev.lon), y = py(ev.lat);
       el('circle', { class: 'hit', cx: x, cy: y, r: self.hitRadius(r), 'data-r': r }, g);
       if (r >= 1.6 || stamp - ev.time < FRESH_MS) {
@@ -495,6 +496,29 @@
       title.textContent = ev.title;
       self.nodes[ev.id] = g;
     });
+    this.applyFilter();
+  };
+
+  // Dim the categories that are switched off. They stay on the map on purpose:
+  // a filter is about attention, not deletion, and the surrounding events are
+  // the context that makes a cluster legible.
+  Map.prototype.setFilter = function (activeKinds) {
+    this._filter = activeKinds || null;
+    this.applyFilter();
+  };
+
+  Map.prototype.applyFilter = function () {
+    var f = this._filter, i, n;
+    var mks = this.gMarkers.querySelectorAll('.mk');
+    for (i = 0; i < mks.length; i++) {
+      n = mks[i];
+      n.classList.toggle('filtered', !!f && !f[n.getAttribute('data-kind')]);
+    }
+    var tr = this.gTracks.querySelectorAll('.track');
+    for (i = 0; i < tr.length; i++) {
+      n = tr[i];
+      n.classList.toggle('filtered', !!f && !f[n.getAttribute('data-kind')]);
+    }
   };
 
   Map.prototype.drawTrack = function (ev) {
@@ -505,7 +529,7 @@
       if (i === 0 || Math.abs(pts[i][0] - pts[i - 1][0]) > 180) cmd = 'M'; // antimeridian jump
       d += cmd + px(pts[i][0]).toFixed(2) + ' ' + py(pts[i][1]).toFixed(2) + ' ';
     }
-    var p = el('path', { class: 'track k-' + ev.kind, d: d.trim(), 'data-id': ev.id }, this.gTracks);
+    var p = el('path', { class: 'track k-' + ev.kind, d: d.trim(), 'data-id': ev.id, 'data-kind': ev.kind }, this.gTracks);
     this.trackNodes[ev.id] = p;
     return p;
   };

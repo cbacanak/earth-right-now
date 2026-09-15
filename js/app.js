@@ -9,10 +9,28 @@
   var RETRY_MAX_MS = 5 * 60000;
   var TRAIL_MAX = 8;
 
+  // The HUD vocabulary is five words wide, so a few EONET kinds have to share
+  // a button. Floods ride with STORMS: they are the water the storm drops.
+  // Everything left over (dust, drought, landslide, the grey "event" bucket)
+  // belongs to no group and is therefore visible only under ALL — the rule is
+  // simply "ALL shows everything, narrowing shows only what you narrowed to".
+  var FILTER_GROUPS = [
+    { key: 'quakes', kinds: ['earthquake'] },
+    { key: 'fires', kinds: ['wildfires'] },
+    { key: 'volcanoes', kinds: ['volcanoes'] },
+    { key: 'storms', kinds: ['severeStorms', 'floods'] },
+    { key: 'cryo', kinds: ['seaLakeIce'] }
+  ];
+  var GROUP_OF = {};
+  FILTER_GROUPS.forEach(function (g) {
+    g.kinds.forEach(function (k) { GROUP_OF[k] = g.key; });
+  });
+
   var state = {
     bySource: { usgs: [], eonet: [] },
     all: [],
     selectedId: null,
+    activeFilters: {},   // group key -> on; every key present means ALL
     trail: [],
     feeds: {
       usgs: { status: 'idle', lastOk: 0, retries: 0, timer: null },
@@ -123,10 +141,11 @@
 
   function rebuild() {
     state.all = state.bySource.usgs.concat(state.bySource.eonet);
-    map.setEvents(state.all);
+    map.setEvents(state.all);   // every event is drawn; filtering only dims
     renderLegend();
+    renderFilters();
     updateHint();
-    $('#btn-random').disabled = state.all.length === 0;
+    $('#btn-random').disabled = pool().length === 0;
 
     // keep the selection alive across refreshes; drop it if the event is gone
     if (state.selectedId) {
@@ -144,6 +163,82 @@
     return null;
   }
 
+  // ---------- filters ----------
+
+  function allActive() {
+    for (var i = 0; i < FILTER_GROUPS.length; i++) {
+      if (!state.activeFilters[FILTER_GROUPS[i].key]) return false;
+    }
+    return true;
+  }
+
+  function kindActive(kind) {
+    if (allActive()) return true;
+    var g = GROUP_OF[kind];
+    return g ? !!state.activeFilters[g] : false;
+  }
+
+  // The pool the rabbit hole explores. Filtering narrows discovery, not just
+  // the picture: a quake-free view whose "near" list is nothing but quakes
+  // would drag you straight back into the category you just switched off.
+  function pool() {
+    if (allActive()) return state.all;
+    return state.all.filter(function (e) { return kindActive(e.kind); });
+  }
+
+  function setAllFilters(on) {
+    FILTER_GROUPS.forEach(function (g) { state.activeFilters[g.key] = on; });
+  }
+
+  function toggleFilter(key) {
+    if (key === 'all') { setAllFilters(true); }
+    else if (allActive()) {
+      // From the everything view, the first click means "show me this one",
+      // not "hide this one" — that is what people reach for a legend to do.
+      setAllFilters(false);
+      state.activeFilters[key] = true;
+    } else {
+      state.activeFilters[key] = !state.activeFilters[key];
+      var any = FILTER_GROUPS.some(function (g) { return state.activeFilters[g.key]; });
+      if (!any) setAllFilters(true);   // never leave the reader with a blank map
+    }
+    applyFilters();
+  }
+
+  function applyFilters() {
+    var active = null;
+    if (!allActive()) {
+      active = {};
+      Object.keys(GROUP_OF).forEach(function (k) {
+        if (state.activeFilters[GROUP_OF[k]]) active[k] = true;
+      });
+    }
+    map.setFilter(active);
+    renderFilters();
+    renderLegend();
+    updateHint();
+    $('#btn-random').disabled = pool().length === 0;
+    // A selection survives its own category being switched off; only its
+    // neighbourhood is recomputed against the narrowed pool.
+    if (state.selectedId) select(state.selectedId, { keepTrail: true, fromHash: true });
+  }
+
+  function renderFilters() {
+    var counts = {}, total = state.all.length;
+    state.all.forEach(function (e) {
+      var g = GROUP_OF[e.kind];
+      if (g) counts[g] = (counts[g] || 0) + 1;
+    });
+    var on = allActive();
+    var btns = document.querySelectorAll('#filters .f-btn');
+    for (var i = 0; i < btns.length; i++) {
+      var b = btns[i], key = b.getAttribute('data-filter');
+      var isAll = key === 'all';
+      b.setAttribute('aria-pressed', String(isAll ? on : !!state.activeFilters[key]));
+      b.querySelector('b').textContent = isAll ? total : (counts[key] || 0);
+    }
+  }
+
   // ---------- panel ----------
 
   function renderLegend() {
@@ -154,6 +249,7 @@
     ERN.KIND_ORDER.forEach(function (k) {
       if (!counts[k]) return;
       var s = document.createElement('span');
+      if (!kindActive(k)) s.className = 'off';   // agree with the map
       s.appendChild(kindDot(k));
       s.appendChild(document.createTextNode(ERN.KIND_LABELS[k] + ' '));
       var b = document.createElement('b');
@@ -173,7 +269,10 @@
     } else if (!state.all.length) {
       h.textContent = 'loading feeds…';
     } else {
-      h.textContent = state.all.length + ' events · click one';
+      var shown = pool().length;
+      h.textContent = allActive()
+        ? shown + ' events · click one'
+        : shown + ' of ' + state.all.length + ' events · click one';
     }
   }
 
@@ -196,7 +295,7 @@
       return;
     }
 
-    var near = ERN.engine.nearby(ev, state.all);
+    var near = ERN.engine.nearby(ev, pool());
     map.focus(ev, near.items);
     renderDetail(ev, near);
     if (!opts.fromHash) history.replaceState(null, '', '#' + ev.id);
@@ -211,6 +310,14 @@
     kind.textContent = '';
     kind.appendChild(kindDot(ev.kind));
     kind.appendChild(document.createTextNode(ev.kindLabel));
+    // You can switch off the category of the event you are reading. The
+    // selection survives and stays lit; the panel just says so.
+    if (!kindActive(ev.kind)) {
+      var off = document.createElement('span');
+      off.className = 'off';
+      off.textContent = 'filtered out';
+      kind.appendChild(off);
+    }
 
     $('#d-title').textContent = ev.title;
     $('#d-when').textContent = fmtAgo(ev.time) + ' · ' + fmtUTC(ev.time);
@@ -233,8 +340,9 @@
 
     // near list
     var note = $('#near-note');
-    if (near.fallback) note.textContent = 'nothing close in space and time. nearest anyway:';
-    else note.textContent = '';
+    var scope = allActive() ? '' : ' in the active categories';
+    if (near.fallback) note.textContent = 'nothing close in space and time' + scope + '. nearest anyway:';
+    else note.textContent = scope ? 'in the active categories' : '';
 
     var list = $('#near');
     list.textContent = '';
@@ -287,9 +395,16 @@
 
   function boot() {
     map = new ERN.Map($('#map'), function (id) { select(id); });
+    setAllFilters(true);
+    renderFilters();
+
+    $('#filters').addEventListener('click', function (e) {
+      var b = e.target.closest('.f-btn');
+      if (b) toggleFilter(b.getAttribute('data-filter'));
+    });
 
     $('#btn-random').addEventListener('click', function () {
-      var pick = ERN.engine.randomPick(state.all, Date.now(), state.selectedId);
+      var pick = ERN.engine.randomPick(pool(), Date.now(), state.selectedId);
       if (pick) select(pick.id);
     });
 
