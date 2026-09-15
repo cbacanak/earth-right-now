@@ -82,6 +82,25 @@ cevaplayabilir. Sıradaki üç adım: Pages'i `main` için aç, iki durum
 noktasının yeşile döndüğünü gör, on dakika oyna ve cevabı CHANGELOG'a
 yaz.
 
+### Aşama 2 hazırlığı (şimdi yapılmayacak, ama şimdiden biliniyor)
+
+**Botun eleme mantığı geçmiş gerektiriyor.** §5'in altın kuralı "bu
+bölgede son on iki yılın en büyüğü" diyebilmeyi istiyor. Sayfa
+hafızasında sadece yedi günlük pencere tutuyor ve her yenilemede
+unutuyor; bu haliyle hiçbir şeyi "en büyük" diye niteleyemez.
+Çözüm: bot gönderi anında USGS sorgu ucuna sorar. Anahtar
+gerekmiyor, veritabanı gerekmiyor.
+
+**Bu Aşama 4 değil.** Zaman makinesi geçmişi *saklamak* demek;
+veritabanı oradan çıkıyor. Bot geçmişi saklamaz, gönderi anında
+sorar ve unutur. İkisi karıştırılırsa Aşama 2 gereksiz yere Aşama
+4'ün maliyetini üstlenir. Karıştırma.
+
+**Paylaşım kartı yok.** Sayfada `og:` etiketi, önizleme görseli ve
+favicon yok. Bluesky ve Mastodon bağlantıyı boş kartla gösterir.
+Vaadi harita olan bir üründe boş önizleme tıklamayı öldürür.
+Aşama 2'nin parçası; yayından önce kapanır.
+
 ### Aşama 3'e ertelenen (anahtar ve/veya proxy gerektirir)
 
 - **NASA FIRMS** — uydu yangınları (MAP_KEY)
@@ -179,6 +198,10 @@ Emek yüksek, risk yüksek, getiri sıfır.
   bağlanma ve durum göstergesi
 - **Rabbit hole mekaniği tutmayabilir** → Aşama 1 testinin tüm amacı
   bunu ucuza öğrenmek
+- **Klavyeyle gezinme yok.** Haritadaki işaretler ve "yakınında ne
+  var" listesi sadece tıklamayla seçiliyor. Aşama 1 testini
+  engellemiyor, o testi fareyle yapacaksın. Ama yayından önce
+  kapanmalı.
 - **Gelir yok.** Bu bir dijital oyuncak. En iyi senaryo ilgi ve
   görünürlük, aylık gelir değil. Beklentiyi buna göre kur.
 
@@ -188,3 +211,17 @@ Emek yüksek, risk yüksek, getiri sıfır.
 - Paylaşılabilir anlık görüntü / kart üretimi
 - Olay tarihçesi sayfaları
 - Kullanıcı filtreleri kaydetme
+
+### Bilinen sınırlar (Aşama 1'de bilerek bırakıldı)
+
+Kaybolmasın diye yazıldı. Hiçbiri Aşama 1 testini engellemiyor.
+
+- **Tarih çizgisi.** 180. meridyenin iki yanındaki iki olay için
+  panel doğru mesafeyi veriyor, mesafe hesabı küresel. Ama haritada
+  aralarına bağlantı çizgisi çizilmiyor ve fırtına izleri aynı
+  yerde kopuyor.
+- **EONET kategorileri.** Yangın, volkan, fırtına, buz ve sel kendi
+  rengini alıyor. Toz, kuraklık, heyelan ve geri kalan her şey tek
+  bir gri "event" kovasına düşüyor.
+- **Klavye.** Sadece `R` ve `Esc` çalışıyor. Bkz. §7 — bu üçünün
+  içinde yayın öncesi kapanması gereken tek madde bu.
