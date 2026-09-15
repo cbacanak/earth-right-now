@@ -44,6 +44,7 @@
         <g id="graticule"></g>
         <g id="labels"></g>
         <g id="tracks"></g>
+        <g id="felt"></g>
         <g id="links"></g>
         <g id="markers"></g>
         <g id="selection"></g>
@@ -84,6 +85,18 @@
           <div><dt id="d-mag-label">size</dt><dd id="d-mag"></dd></div>
           <div><dt>source</dt><dd id="d-source"></dd></div>
         </dl>
+
+        <div class="tm" id="tm" hidden>
+          <div class="tm-block" id="tm-depth" hidden>
+            <div class="tm-head"><span>depth</span><b id="tm-depth-val"></b></div>
+            <div class="tm-axis"><i id="tm-depth-mark"></i></div>
+            <div class="tm-foot"><span>0</span><span id="tm-depth-max"></span></div>
+          </div>
+          <div class="tm-block" id="tm-felt" hidden>
+            <div class="tm-head"><span>felt radius</span><b id="tm-felt-val"></b></div>
+            <p class="tm-note" id="tm-felt-note"></p>
+          </div>
+        </div>
 
         <h2 class="section">what else is near this</h2>
         <p class="muted small" id="near-note"></p>

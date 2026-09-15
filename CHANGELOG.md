@@ -23,6 +23,23 @@ recorded here. See [PLAN.md](PLAN.md) for the stage gates.
   near this" list and "show me something" both draw from the active
   categories only. Switched-off events stay on the map, dimmed rather
   than deleted, so the surrounding context is not lost.
+- **Telemetry, from real numbers only.** The selected earthquake gets a
+  modelled felt extent drawn on the map, a depth scale in the panel, and
+  direction vectors to its neighbours that now carry how related the
+  engine judged each one to be.
+- The felt extent is the MMI 4 contour from Allen, Wald and Worden (2012)
+  intensity attenuation for active crustal regions, in its hypocentral
+  distance form, which is the one meant for real-time use where no
+  rupture geometry is known. Coefficients are transcribed from the GEM
+  OpenQuake implementation, not written from memory. It is drawn as an
+  ellipse because a constant ground radius is not round on this
+  projection, dashed so it never reads as a surveyed boundary, and it is
+  not drawn at all when the model has nothing to say: below MMI 4, deeper
+  than 70 km, or missing a magnitude. The panel names the model and what
+  it leaves out.
+- No seismogram. A simulated waveform would be an invention, and an
+  instrument that invents its own signal is worthless. Real waveforms
+  come from a separate USGS endpoint and belong to Stage 3.
 - **Palette cut to four category colours**, per PLAN section 4.1: amber
   `#ffb000` for earthquakes, coral `#ff4d2e` for fires, a desaturated
   magenta `#d94fa8` for volcanoes, and one cold blue `#6ec6d9` for
@@ -117,8 +134,9 @@ are what Stage 1.5 exists to fix; see PLAN.md §1.
 
 ### Stage 1.5 — UX, navigation, resilience
 _In progress._ Pan and zoom, category filters, the offline cushion, the
-mobile sheet, keyboard navigation and the palette are in; telemetry is
-not. The gate test has not been run.
+every build item is in: pan and zoom, filters, the offline cushion, the
+mobile sheet, keyboard navigation, the palette and telemetry. The gate
+test has not been run.
 
 ### Stage 2 — Publish and distribution
 _Not started._

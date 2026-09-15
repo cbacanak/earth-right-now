@@ -271,6 +271,17 @@ body {
 #map { outline: none; }
 #map:focus-visible .map-bg { stroke: var(--fg-dim); stroke-width: calc(0.4 * var(--zs, 1)); }
 
+/* Modelled, not measured: dashed and faint so it never reads as a boundary
+   somebody surveyed. The panel says what it is and where it comes from. */
+.felt-ring {
+  fill: none;
+  stroke: var(--c-quake);
+  stroke-width: calc(0.22 * var(--zs, 1));
+  stroke-opacity: 0.5;
+  stroke-dasharray: calc(1.6 * var(--zs, 1)) calc(1.4 * var(--zs, 1));
+  pointer-events: none;
+}
+
 .focus-reticle {
   fill: none;
   stroke: var(--accent);
@@ -442,6 +453,45 @@ body {
 .facts dd { margin: 0; font-variant-numeric: tabular-nums; }
 .facts dd a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--fg-dim); }
 .facts dd a:hover { border-bottom-color: var(--fg); }
+
+/* ---------- telemetry ---------- */
+
+.tm { margin: 0 0 22px; display: grid; gap: 16px; }
+.tm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.tm-head b {
+  font-weight: normal;
+  color: var(--fg);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.tm-axis { position: relative; height: 3px; background: var(--line); margin: 8px 0 5px; }
+.tm-axis i {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 11px;
+  background: var(--c-quake);
+  transform: translateX(-1px);
+}
+.tm-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.tm-note { margin: 6px 0 0; font-size: 10px; line-height: 1.55; color: var(--fg-dim); }
 
 .section {
   font-size: 10px;
